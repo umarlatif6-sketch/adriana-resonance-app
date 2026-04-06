@@ -1,0 +1,39 @@
+{
+  "test_number": 3,
+  "timestamp": "2026-04-06T04:15:03Z",
+  "label": "UPDATED_APP",
+  "config": {
+    "concurrent": 20,
+    "total_requests": 200,
+    "sustained_duration_seconds": 60,
+    "endpoints_tested": 5
+  },
+  "warmup": {
+    "homepage_avg_ms": 20,
+    "metahex_avg_ms": 62,
+    "seed_tracks_avg_ms": 20,
+    "seed_tracks_status": 200,
+    "trading_stats_avg_ms": 36,
+    "trading_stats_status": 200,
+    "trading_alert_avg_ms": 11,
+    "trading_alert_status": 200
+  },
+  "burst": {
+    "duration_ms": 2185
+  },
+  "sustained": {
+    "total_requests": 2220,
+    "success": 2220,
+    "errors": 0,
+    "requests_per_second": 37,
+    "response_time_min_ms": 9,
+    "response_time_avg_ms": 24,
+    "response_time_max_ms": 134,
+    "error_rate_percent": 0
+  },
+  "system": {
+    "memory_mb": 0,
+    "cpu_percent": 0.0
+  },
+  "total_duration_ms": 62970
+}
