@@ -7,9 +7,7 @@
  * YOUR frequency. Your personal resonance pattern telling you
  * when YOU are no longer in sync with the trade.
  *
- * The behaviour tracker reads how you move.
- * The hex signature establishes your baseline.
- * When your live behaviour deviates, Adriana speaks.
+ * Now with TradingView lightweight-charts for proper candle rendering.
  *
  * Design: Void Terminal (JetBrains Mono, #00ff41 on #020202)
  * ═══════════════════════════════════════════════════════════════
@@ -19,6 +17,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import Nav from "@/components/Nav";
 import { useTracker } from "@/components/AppShell";
+import { createChart, ColorType, CandlestickSeries, HistogramSeries, CrosshairMode } from "lightweight-charts";
+import type { IChartApi, CandlestickData, Time } from "lightweight-charts";
 
 type Candle = {
   time: number;
@@ -79,12 +79,17 @@ export default function Trading() {
   const [showTradeForm, setShowTradeForm] = useState(false);
   const [tradeDirection, setTradeDirection] = useState<"long" | "short">("long");
   const [tradeQuantity, setTradeQuantity] = useState("1");
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // TradingView chart refs
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const candleSeriesRef = useRef<any>(null);
+  const volumeSeriesRef = useRef<any>(null);
 
   // Fetch market data
   const { data: marketData, isLoading: marketLoading, error: marketErr } = trpc.trading.getMarketData.useQuery(
     { symbol, interval, range },
-    { refetchInterval: 30000 } // Refresh every 30s
+    { refetchInterval: 30000 }
   );
 
   // Get alert based on current vs baseline hex
@@ -148,17 +153,16 @@ export default function Trading() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Poll the visitor session for hex data (updated by the behaviour tracker)
+  // Poll the visitor session for hex data
   const { data: sessionData } = trpc.visitor.getSession.useQuery(
     { sessionId },
-    { refetchInterval: 8000 } // Re-read every 8 seconds
+    { refetchInterval: 8000 }
   );
 
   // Trigger hex generation periodically
   const generateHex = trpc.diagnosis.generateHex.useMutation();
   const hexGenTimer = useRef<number | null>(null);
   useEffect(() => {
-    // Generate hex immediately and then every 10 seconds
     const doGenerate = () => generateHex.mutate({ sessionId });
     doGenerate();
     hexGenTimer.current = window.setInterval(doGenerate, 10000);
@@ -173,7 +177,6 @@ export default function Trading() {
         const freq = typeof sessionData.baseFrequency === 'number' ? sessionData.baseFrequency : parseFloat(String(sessionData.baseFrequency));
         setCurrentFreq(freq || 432);
       }
-      // Set baseline on first real read
       if (baselineHex === "00000000") {
         setBaselineHex(sessionData.hexSignature);
         if (sessionData.baseFrequency) {
@@ -190,119 +193,128 @@ export default function Trading() {
     tracker.trackResonance("trading_session_start", { symbol });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Draw candlestick chart
-  const drawChart = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !marketData?.candles?.length) return;
+  // ═══════════════════════════════════════════════════════════
+  // TRADINGVIEW LIGHTWEIGHT CHARTS — INIT & UPDATE
+  // ═══════════════════════════════════════════════════════════
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+  // Initialize chart
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
 
-    const candles = marketData.candles as Candle[];
-    const w = canvas.width;
-    const h = canvas.height;
-
-    ctx.clearRect(0, 0, w, h);
-
-    // Background
-    ctx.fillStyle = "#020202";
-    ctx.fillRect(0, 0, w, h);
-
-    // Grid lines
-    ctx.strokeStyle = "rgba(0,255,65,0.05)";
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 5; i++) {
-      const y = (h / 5) * i;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
+    // Clean up previous chart
+    if (chartRef.current) {
+      chartRef.current.remove();
+      chartRef.current = null;
+      candleSeriesRef.current = null;
+      volumeSeriesRef.current = null;
     }
 
-    if (candles.length === 0) return;
-
-    const highs = candles.map(c => c.high);
-    const lows = candles.map(c => c.low);
-    const maxPrice = Math.max(...highs);
-    const minPrice = Math.min(...lows);
-    const priceRange = maxPrice - minPrice || 1;
-    const padding = 20;
-    const chartH = h - padding * 2;
-    const candleW = Math.max(2, (w - padding * 2) / candles.length - 1);
-
-    const priceToY = (price: number) => {
-      return padding + chartH - ((price - minPrice) / priceRange) * chartH;
-    };
-
-    candles.forEach((candle, i) => {
-      const x = padding + i * (candleW + 1);
-      const isGreen = candle.close >= candle.open;
-      const color = isGreen ? "#00ff41" : "#ff4444";
-
-      // Wick
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x + candleW / 2, priceToY(candle.high));
-      ctx.lineTo(x + candleW / 2, priceToY(candle.low));
-      ctx.stroke();
-
-      // Body
-      const openY = priceToY(candle.open);
-      const closeY = priceToY(candle.close);
-      ctx.fillStyle = isGreen ? "rgba(0,255,65,0.6)" : "rgba(255,68,68,0.6)";
-      ctx.fillRect(x, Math.min(openY, closeY), candleW, Math.max(1, Math.abs(closeY - openY)));
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: "#020202" },
+        textColor: "rgba(0,255,65,0.5)",
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 10,
+      },
+      grid: {
+        vertLines: { color: "rgba(0,255,65,0.04)" },
+        horzLines: { color: "rgba(0,255,65,0.04)" },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+          color: "rgba(0,255,65,0.3)",
+          width: 1,
+          style: 2,
+          labelBackgroundColor: "#0a1a0a",
+        },
+        horzLine: {
+          color: "rgba(0,255,65,0.3)",
+          width: 1,
+          style: 2,
+          labelBackgroundColor: "#0a1a0a",
+        },
+      },
+      rightPriceScale: {
+        borderColor: "rgba(0,255,65,0.1)",
+        scaleMargins: { top: 0.1, bottom: 0.2 },
+      },
+      timeScale: {
+        borderColor: "rgba(0,255,65,0.1)",
+        timeVisible: true,
+        secondsVisible: false,
+      },
+      handleScroll: { vertTouchDrag: false },
     });
 
-    // Price labels
-    ctx.fillStyle = "rgba(0,255,65,0.3)";
-    ctx.font = "9px 'JetBrains Mono', monospace";
-    ctx.textAlign = "right";
-    for (let i = 0; i <= 4; i++) {
-      const price = minPrice + (priceRange / 4) * i;
-      const y = priceToY(price);
-      ctx.fillText(price.toFixed(2), w - 4, y + 3);
-    }
+    const candleSeries = chart.addSeries(CandlestickSeries, {
+      upColor: "#00ff41",
+      downColor: "#ff4444",
+      borderDownColor: "#ff4444",
+      borderUpColor: "#00ff41",
+      wickDownColor: "rgba(255,68,68,0.6)",
+      wickUpColor: "rgba(0,255,65,0.6)",
+    });
 
-    // Current price line
-    if (candles.length > 0) {
-      const lastPrice = candles[candles.length - 1].close;
-      const y = priceToY(lastPrice);
-      ctx.setLineDash([4, 4]);
-      ctx.strokeStyle = "rgba(0,255,65,0.4)";
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-      ctx.setLineDash([]);
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: "volume" },
+      priceScaleId: "",
+    });
 
-      ctx.fillStyle = "#00ff41";
-      ctx.font = "bold 10px 'JetBrains Mono', monospace";
-      ctx.textAlign = "left";
-      ctx.fillText(`${lastPrice.toFixed(2)}`, 4, y - 4);
+    volumeSeries.priceScale().applyOptions({
+      scaleMargins: { top: 0.8, bottom: 0 },
+    });
+
+    chartRef.current = chart;
+    candleSeriesRef.current = candleSeries;
+    volumeSeriesRef.current = volumeSeries;
+
+    // Handle resize
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        chart.applyOptions({ width, height });
+      }
+    });
+    resizeObserver.observe(chartContainerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+      chart.remove();
+      chartRef.current = null;
+      candleSeriesRef.current = null;
+      volumeSeriesRef.current = null;
+    };
+  }, []); // Only create chart once
+
+  // Update chart data when marketData changes
+  useEffect(() => {
+    if (!candleSeriesRef.current || !volumeSeriesRef.current || !marketData?.candles?.length) return;
+
+    const candles = marketData.candles as Candle[];
+
+    const candleData: CandlestickData<Time>[] = candles.map(c => ({
+      time: c.time as Time,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+    }));
+
+    const volumeData = candles.map(c => ({
+      time: c.time as Time,
+      value: c.volume,
+      color: c.close >= c.open ? "rgba(0,255,65,0.15)" : "rgba(255,68,68,0.15)",
+    }));
+
+    candleSeriesRef.current.setData(candleData);
+    volumeSeriesRef.current.setData(volumeData);
+
+    // Fit content to show all candles
+    if (chartRef.current) {
+      chartRef.current.timeScale().fitContent();
     }
   }, [marketData]);
-
-  useEffect(() => {
-    drawChart();
-  }, [drawChart]);
-
-  // Resize canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const resize = () => {
-      const parent = canvas.parentElement;
-      if (parent) {
-        canvas.width = parent.clientWidth;
-        canvas.height = parent.clientHeight;
-        drawChart();
-      }
-    };
-    resize();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, [drawChart]);
 
   const handleOpenTrade = () => {
     if (!tradeSessionId || !marketData?.meta) return;
@@ -435,7 +447,7 @@ export default function Trading() {
 
         {/* Symbol & Interval Selector */}
         <div
-          className="flex items-center gap-2 shrink-0"
+          className="flex items-center gap-2 shrink-0 flex-wrap"
           style={{
             padding: "0.5rem 1rem",
             borderBottom: "1px solid rgba(0,255,65,0.06)",
@@ -513,24 +525,24 @@ export default function Trading() {
           </div>
         )}
 
-        {/* Chart */}
-        <div style={{ flex: 1, minHeight: "200px", maxHeight: "320px", padding: "0 0.5rem", position: "relative" }}>
-          {marketLoading && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+        {/* TradingView Chart */}
+        <div style={{ position: "relative", minHeight: "350px", maxHeight: "420px", flex: 1 }}>
+          {marketLoading && !marketData && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, background: "rgba(2,2,2,0.8)" }}>
               <span style={{ fontSize: "0.6rem", color: "rgba(0,255,65,0.4)", letterSpacing: "0.15em" }}>LOADING MARKET DATA...</span>
             </div>
           )}
           {marketErr && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, background: "rgba(2,2,2,0.8)" }}>
               <span style={{ fontSize: "0.6rem", color: "#ff4444", letterSpacing: "0.1em" }}>MARKET FEED ERROR — RETRYING</span>
             </div>
           )}
           {!marketLoading && !marketErr && (!marketData?.candles || marketData.candles.length === 0) && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, background: "rgba(2,2,2,0.8)" }}>
               <span style={{ fontSize: "0.6rem", color: "rgba(0,255,65,0.3)", letterSpacing: "0.1em" }}>NO CANDLE DATA FOR {symbol}</span>
             </div>
           )}
-          <canvas ref={canvasRef} style={{ width: "100%", height: "100%" }} />
+          <div ref={chartContainerRef} style={{ width: "100%", height: "100%", minHeight: "350px" }} />
         </div>
 
         {/* Frequency Meter */}

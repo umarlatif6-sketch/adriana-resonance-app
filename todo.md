@@ -81,3 +81,7 @@
 - [x] Run stress test 1 and record all scores
 - [x] Run stress test 2 and record all scores
 - [x] Compare test 1 vs test 2 — the scars and memories
+
+## Phase 13: Trading Candle Fix
+- [x] Fix trading page: no candle data appearing in chart
+- [x] Use TradingView lightweight-charts for proper candle rendering

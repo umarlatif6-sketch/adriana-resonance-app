@@ -764,7 +764,7 @@ FREQUENCY PARAMETERS:
               region: "US",
               interval: input.interval,
               range: input.range,
-              includeAdjustedClose: true,
+              includeAdjustedClose: "true",
             },
           }) as any;
 
