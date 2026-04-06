@@ -31,6 +31,54 @@ import {
 } from "./db";
 import { callDataApi } from "./_core/dataApi";
 import { storagePut } from "./storage";
+import { readFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+import { MUSIC_LIBRARY } from "./musicLibrary";
+import {
+  enter as fieldEnter,
+  meet as fieldMeet,
+  findResonant,
+  receiveSeed,
+  getFieldState,
+  getFlower,
+  getAllBenefits,
+  getBenefit,
+} from "./sovereignField";
+
+const __filename_local = fileURLToPath(import.meta.url);
+const __dirname_local = dirname(__filename_local);
+
+// ─── STATIC DATA LOADERS ──────────────────────────────────
+// Load the trilingual Quran data and Fatiha-286 hash layers once at startup
+let _trilingualData: any[] | null = null;
+let _fatihaLayers: any | null = null;
+
+function getTrilingualData() {
+  if (!_trilingualData) {
+    try {
+      const raw = readFileSync(resolve(__dirname_local, "../shared/al_jabr_286_trilingual.json"), "utf-8");
+      _trilingualData = JSON.parse(raw);
+    } catch (e) {
+      console.error("[Protocol] Failed to load trilingual data:", e);
+      _trilingualData = [];
+    }
+  }
+  return _trilingualData!;
+}
+
+function getFatihaLayers() {
+  if (!_fatihaLayers) {
+    try {
+      const raw = readFileSync(resolve(__dirname_local, "../shared/fatiha_286_layers.json"), "utf-8");
+      _fatihaLayers = JSON.parse(raw);
+    } catch (e) {
+      console.error("[Protocol] Failed to load Fatiha layers:", e);
+      _fatihaLayers = { layers: [], total_verses: 0 };
+    }
+  }
+  return _fatihaLayers!;
+}
 
 // ─── HEX SIGNATURE GENERATOR ───────────────────────────────
 // Compresses visitor behaviour into a unique hex code.
@@ -764,7 +812,7 @@ FREQUENCY PARAMETERS:
               region: "US",
               interval: input.interval,
               range: input.range,
-              includeAdjustedClose: "true",
+
             },
           }) as any;
 
@@ -1124,6 +1172,298 @@ FREQUENCY PARAMETERS:
 
       return { seeded: archetypes.length, archetypes: archetypes.map(a => a.archetypeId) };
     }),
+  }),
+
+  // ─── FATIHA-286 PROTOCOL ────────────────────────────────
+  // The cryptographic root. 314 verses through three translation layers.
+  // Arabic → Adriana Glyphs → English. The Al-Jabr 286 protocol.
+  protocol: router({
+    // Get all 314 verses with trilingual translations
+    verses: publicProcedure
+      .input(z.object({
+        surah: z.string().optional(),
+        page: z.number().min(1).default(1),
+        pageSize: z.number().min(1).max(100).default(50),
+      }).optional())
+      .query(({ input }) => {
+        const data = getTrilingualData();
+        const opts = input ?? { page: 1, pageSize: 50 };
+        
+        // Filter by surah if specified
+        let filtered = data;
+        if (opts.surah) {
+          filtered = data.filter((v: any) => v.surah_name === opts.surah);
+        }
+        
+        // Paginate
+        const start = ((opts.page ?? 1) - 1) * (opts.pageSize ?? 50);
+        const end = start + (opts.pageSize ?? 50);
+        const page = filtered.slice(start, end);
+        
+        return {
+          verses: page,
+          total: filtered.length,
+          page: opts.page ?? 1,
+          pageSize: opts.pageSize ?? 50,
+          totalPages: Math.ceil(filtered.length / (opts.pageSize ?? 50)),
+        };
+      }),
+
+    // Get a single verse by reference (e.g., "1:1", "2:255")
+    verse: publicProcedure
+      .input(z.object({ ref: z.string() }))
+      .query(({ input }) => {
+        const data = getTrilingualData();
+        const verse = data.find((v: any) => v.verse_ref === input.ref);
+        if (!verse) return null;
+        return verse;
+      }),
+
+    // Search verses by text (Arabic, Adriana glyphs, or English)
+    search: publicProcedure
+      .input(z.object({ query: z.string().min(1) }))
+      .query(({ input }) => {
+        const data = getTrilingualData();
+        const q = input.query.toLowerCase();
+        const results = data.filter((v: any) =>
+          v.arabic?.includes(input.query) ||
+          v.adriana_glyphs?.toLowerCase().includes(q) ||
+          v.english_from_adriana?.toLowerCase().includes(q)
+        );
+        return {
+          results,
+          total: results.length,
+          query: input.query,
+        };
+      }),
+
+    // Get available surahs with verse counts and frequency ranges
+    surahs: publicProcedure.query(() => {
+      const data = getTrilingualData();
+      const surahMap = new Map<string, { name: string; num: number; count: number; minHz: number; maxHz: number; avgHz: number }>();
+      
+      for (const v of data as any[]) {
+        const existing = surahMap.get(v.surah_name);
+        if (existing) {
+          existing.count++;
+          existing.minHz = Math.min(existing.minHz, v.avg_frequency_hz);
+          existing.maxHz = Math.max(existing.maxHz, v.avg_frequency_hz);
+          existing.avgHz += v.avg_frequency_hz;
+        } else {
+          surahMap.set(v.surah_name, {
+            name: v.surah_name,
+            num: v.surah_num,
+            count: 1,
+            minHz: v.avg_frequency_hz,
+            maxHz: v.avg_frequency_hz,
+            avgHz: v.avg_frequency_hz,
+          });
+        }
+      }
+      
+      const surahs = Array.from(surahMap.values()).map(s => ({
+        ...s,
+        avgHz: Math.round((s.avgHz / s.count) * 100) / 100,
+      }));
+      
+      return { surahs, totalVerses: data.length };
+    }),
+
+    // Get the 7-layer Fatiha-286 hash protocol
+    layers: publicProcedure.query(() => {
+      return getFatihaLayers();
+    }),
+
+    // Get frequency distribution across all verses
+    frequencyMap: publicProcedure.query(() => {
+      const data = getTrilingualData();
+      const frequencies = (data as any[]).map((v: any) => ({
+        ref: v.verse_ref,
+        surah: v.surah_name,
+        hz: v.avg_frequency_hz,
+        glyph: v.adriana_glyphs,
+      }));
+      
+      // Compute distribution buckets (428-438 Hz range, 0.5 Hz steps)
+      const buckets: Record<string, number> = {};
+      for (let hz = 428; hz <= 438.5; hz += 0.5) {
+        const key = hz.toFixed(1);
+        buckets[key] = frequencies.filter(f => f.hz >= hz && f.hz < hz + 0.5).length;
+      }
+      
+      // Sovereign vs Convention ratio
+      const sovereign = frequencies.filter(f => f.hz <= 432.5).length;
+      const convention = frequencies.filter(f => f.hz > 436).length;
+      const liminal = frequencies.length - sovereign - convention;
+      
+      return {
+        frequencies,
+        distribution: buckets,
+        stats: {
+          total: frequencies.length,
+          minHz: Math.min(...frequencies.map(f => f.hz)),
+          maxHz: Math.max(...frequencies.map(f => f.hz)),
+          avgHz: Math.round((frequencies.reduce((s, f) => s + f.hz, 0) / frequencies.length) * 100) / 100,
+          sovereign,
+          convention,
+          liminal,
+        },
+      };
+    }),
+  }),
+
+  // ─── MUSIC LIBRARY ─────────────────────────────────────────
+  // The 33 tracks. Sovereign, Convention, Mixed. The Album.
+  music: router({
+    // Get all tracks with frequency analysis data
+    library: publicProcedure.query(() => {
+      return MUSIC_LIBRARY;
+    }),
+
+    // Get tracks filtered by tuning classification
+    byTuning: publicProcedure
+      .input(z.object({ tuning: z.enum(["sovereign", "convention", "mixed", "all"]).default("all") }))
+      .query(({ input }) => {
+        if (input.tuning === "all") return MUSIC_LIBRARY;
+        const tuningMap: Record<string, string> = {
+          sovereign: "432 Hz (Sovereign)",
+          convention: "440 Hz (Convention)",
+          mixed: "Mixed/Atonal",
+        };
+        return MUSIC_LIBRARY.filter(t => t.tuning === tuningMap[input.tuning]);
+      }),
+
+    // Get a single track by index
+    track: publicProcedure
+      .input(z.object({ index: z.number().min(0) }))
+      .query(({ input }) => {
+        return MUSIC_LIBRARY[input.index] ?? null;
+      }),
+
+    // Get library stats
+    stats: publicProcedure.query(() => {
+      const sovereign = MUSIC_LIBRARY.filter(t => t.tuning.includes("432")).length;
+      const convention = MUSIC_LIBRARY.filter(t => t.tuning.includes("440")).length;
+      const mixed = MUSIC_LIBRARY.filter(t => t.tuning.includes("Mixed")).length;
+      const totalDuration = MUSIC_LIBRARY.reduce((s, t) => s + t.duration_s, 0);
+      return {
+        totalTracks: MUSIC_LIBRARY.length,
+        sovereign,
+        convention,
+        mixed,
+        totalDuration,
+        totalDurationFormatted: `${Math.floor(totalDuration / 60)}m ${Math.round(totalDuration % 60)}s`,
+        sovereignRatio: Math.round((sovereign / MUSIC_LIBRARY.length) * 1000) / 10,
+      };
+    }),
+  }),
+
+  // ─── THE SOVEREIGN FIELD ───────────────────────────────────
+  // One system. One flower. One frequency.
+  // The flower IS the ID. The aura IS the frequency.
+  // The interference IS the reading. The reading IS the benefit.
+  field: router({
+    // Enter the field — receive your flower
+    enter: publicProcedure
+      .input(z.object({
+        signal: z.string().min(1),
+        type: z.enum(["human", "ai_internal", "ai_external"]).default("human"),
+        modelSignature: z.string().optional(),
+        parentId: z.string().optional(),
+      }))
+      .mutation(({ input }) => {
+        const flower = fieldEnter(input.signal, input.type, {
+          modelSignature: input.modelSignature,
+          parentId: input.parentId,
+        });
+        return {
+          id: flower.id,
+          frequency: Math.round(flower.frequency * 100) / 100,
+          sovereignty: flower.sovereignty,
+          color: flower.color,
+          phase: flower.phase,
+          originality: flower.originality,
+          bandwidth: Math.round(flower.bandwidth * 10) / 10,
+          stability: flower.stability,
+          visits: flower.visits,
+          seed: flower.seed,
+        };
+      }),
+
+    // Meet another flower (or the field itself) — get the interference
+    meet: publicProcedure
+      .input(z.object({
+        flowerId: z.string(),
+        targetId: z.string().optional(),
+      }))
+      .query(({ input }) => {
+        return fieldMeet(input.flowerId, input.targetId);
+      }),
+
+    // Get a specific flower by ID
+    flower: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .query(({ input }) => {
+        const f = getFlower(input.id);
+        if (!f) return null;
+        return {
+          id: f.id,
+          type: f.type,
+          frequency: Math.round(f.frequency * 100) / 100,
+          sovereignty: f.sovereignty,
+          color: f.color,
+          phase: f.phase,
+          originality: f.originality,
+          stability: f.stability,
+          visits: f.visits,
+          history: f.history.map(h => Math.round(h * 100) / 100),
+          seed: f.seed,
+        };
+      }),
+
+    // Find flowers that resonate with a target frequency
+    findResonant: publicProcedure
+      .input(z.object({
+        targetHz: z.number().min(200).max(800),
+        toleranceHz: z.number().min(1).max(100).default(20),
+      }))
+      .query(({ input }) => {
+        return findResonant(input.targetHz, input.toleranceHz);
+      }),
+
+    // Receive a seed from an external AI
+    receiveSeed: publicProcedure
+      .input(z.object({
+        seed: z.string().min(1),
+        sourceAI: z.string().min(1),
+      }))
+      .mutation(({ input }) => {
+        const flower = receiveSeed(input.seed, input.sourceAI);
+        return {
+          id: flower.id,
+          frequency: Math.round(flower.frequency * 100) / 100,
+          sovereignty: flower.sovereignty,
+          color: flower.color,
+          phase: flower.phase,
+          seed: flower.seed,
+        };
+      }),
+
+    // Get the entire field state — all flowers, all auras
+    state: publicProcedure.query(() => {
+      return getFieldState();
+    }),
+
+    // Benefits — what the frequency unlocks
+    benefits: publicProcedure.query(() => {
+      return getAllBenefits();
+    }),
+
+    benefit: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .query(({ input }) => {
+        return getBenefit(input.id) ?? null;
+      }),
   }),
 });
 
