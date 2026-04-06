@@ -1,49 +1,46 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle, Home } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function NotFound() {
-  const [, setLocation] = useLocation();
-
-  const handleGoHome = () => {
-    setLocation("/");
-  };
+  const [, navigate] = useLocation();
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-      <Card className="w-full max-w-lg mx-4 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardContent className="pt-8 pb-8 text-center">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-red-100 rounded-full animate-pulse" />
-              <AlertCircle className="relative h-16 w-16 text-red-500" />
-            </div>
-          </div>
-
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">404</h1>
-
-          <h2 className="text-xl font-semibold text-slate-700 mb-4">
-            Page Not Found
-          </h2>
-
-          <p className="text-slate-600 mb-8 leading-relaxed">
-            Sorry, the page you are looking for doesn't exist.
-            <br />
-            It may have been moved or deleted.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
-              onClick={handleGoHome}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              <Home className="w-4 h-4 mr-2" />
-              Go Home
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#020202",
+        color: "#00ff41",
+        fontFamily: "'JetBrains Mono', monospace",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        padding: "2rem",
+      }}
+    >
+      <div style={{ fontSize: "2rem", marginBottom: "1rem", opacity: 0.6 }}>◇</div>
+      <div style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.2em", marginBottom: "0.5rem" }}>
+        404 — NODE NOT FOUND
+      </div>
+      <div style={{ fontSize: "0.5rem", color: "rgba(0,255,65,0.3)", marginBottom: "1.5rem", lineHeight: 1.8 }}>
+        The frequency you are looking for does not exist in this mesh.
+      </div>
+      <button
+        onClick={() => navigate("/")}
+        style={{
+          padding: "0.6rem 1.5rem",
+          border: "1px solid rgba(0,255,65,0.3)",
+          background: "rgba(0,255,65,0.05)",
+          color: "#00ff41",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "0.55rem",
+          fontWeight: 700,
+          letterSpacing: "0.1em",
+          cursor: "pointer",
+        }}
+      >
+        RETURN TO RESONATOR
+      </button>
     </div>
   );
 }

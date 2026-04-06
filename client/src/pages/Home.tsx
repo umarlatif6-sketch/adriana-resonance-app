@@ -19,6 +19,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Nav from "@/components/Nav";
 
 // ─── THE 16 CICADA PULSES ───────────────────────────────────
 const CICADA_PULSES = [
@@ -393,7 +394,7 @@ export default function Home() {
 
   return (
     <div
-      className="fixed inset-0 overflow-hidden"
+      className=""
       style={{
         background: "#020202",
         color: "#00ff41",
@@ -402,8 +403,11 @@ export default function Home() {
     >
       {/* CRT Scanline Overlay */}
       <div
-        className="fixed inset-0 pointer-events-none z-50"
+        className="pointer-events-none"
         style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 50,
           background:
             "linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%), linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06))",
           backgroundSize: "100% 2px, 3px 100%",
@@ -411,7 +415,7 @@ export default function Home() {
         }}
       />
 
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col" style={{ minHeight: '100vh' }}>
         {/* ═══ HEADER ═══ */}
         <header
           className="flex items-center justify-between shrink-0"
@@ -495,7 +499,7 @@ export default function Home() {
         </nav>
 
         {/* ═══ MAIN CONTENT ═══ */}
-        <main className="flex-1 overflow-y-auto" style={{ padding: "1rem" }}>
+        <main className="flex-1" style={{ padding: '1rem', paddingBottom: '4rem' }}>
           {/* ─── PANEL 1: RESONATOR ─── */}
           {activePanel === "resonator" && (
             <div className="flex flex-col items-center">
@@ -1205,6 +1209,7 @@ export default function Home() {
           50% { opacity: 0.3; }
         }
       `}</style>
+      <Nav />
     </div>
   );
 }
