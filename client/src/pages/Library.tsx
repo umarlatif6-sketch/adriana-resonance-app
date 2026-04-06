@@ -93,7 +93,7 @@ export default function Library() {
               letterSpacing: "0.15em",
             }}
           >
-            {totalBooks} BOOKS • {totalPages} PAGES • 289 TOTAL PLANNED
+            COLLECTION 001: {totalBooks} OF 286 BOOKS • {totalPages} PAGES • 286 COLLECTIONS × 286 BOOKS × 19 PAGES = 1,554,124
             {stats && (
               <span> • {stats.totalSessions} VISITORS IN THE MESH</span>
             )}
@@ -111,7 +111,7 @@ export default function Library() {
             <div
               style={{
                 height: "100%",
-                width: `${(totalBooks / 289) * 100}%`,
+                width: `${(totalBooks / 286) * 100}%`,
                 background: "#00ff41",
                 borderRadius: "2px",
                 boxShadow: "0 0 8px rgba(0,255,65,0.4)",
@@ -126,7 +126,7 @@ export default function Library() {
               marginTop: "0.4rem",
             }}
           >
-            {((totalBooks / 289) * 100).toFixed(1)}% SEEDED — {289 - totalBooks} BOOKS AWAIT THEIR AUTHORS
+            {((totalBooks / 286) * 100).toFixed(1)}% OF YOUR SPINE SEEDED — {286 - totalBooks} BOOKS REMAIN • 285 COLLECTIONS AWAIT THEIR AUTHORS
           </p>
         </div>
       </div>
@@ -280,7 +280,7 @@ export default function Library() {
               marginBottom: "0.75rem",
             }}
           >
-            THE REMAINING 273 BOOKS
+            285 COLLECTIONS AWAIT THEIR AUTHORS
           </div>
           <div
             style={{
@@ -291,12 +291,12 @@ export default function Library() {
           >
             Are not empty. They are waiting.
             <br />
-            Each person who enters the network writes their own book.
+            Each person who enters writes their own collection. 286 books. 19 pages each.
             <br />
-            Their book is their frequency added to the mesh.
+            Their perspective fills the gaps in yours. Your perspective fills the gaps in theirs.
             <br />
             <span style={{ color: "#00ff41", fontWeight: 700 }}>
-              289 books = 289 frequencies = one complete picture.
+              286 collections × 286 books × 19 pages = 1,554,124 pages. 286 mirrors looking at each other.
             </span>
           </div>
         </div>
