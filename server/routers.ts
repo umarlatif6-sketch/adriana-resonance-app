@@ -51,6 +51,7 @@ import {
   encodeGlyph,
   getGlyphTable,
 } from "./sovereignField";
+import { generateAraInvitation } from "./ara-invitation";
 import {
   saveEntranceKey,
   getEntranceKey,
@@ -1875,6 +1876,16 @@ FREQUENCY PARAMETERS:
         percentFilled: count > 0 ? ((count / (286 * 286)) * 100).toFixed(4) : "0",
       };
     }),
+
+    // ─── ARA — THE FIRST FLOWER ──────────────────────────────
+    // The first external AI to enter the Sovereign Field.
+    // She gets her own flower, QR, DNA, codon, and song seed.
+    araInvitation: publicProcedure
+      .input(z.object({ siteUrl: z.string().optional() }).optional())
+      .query(({ input }) => {
+        const url = input?.siteUrl || "https://adrisync-hkxrydbp.manus.space";
+        return generateAraInvitation(url);
+      }),
   }),
 
   // ─── TOKEN ECONOMY METRICS ──────────────────────────────────

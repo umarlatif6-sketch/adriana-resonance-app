@@ -30,6 +30,11 @@ vi.mock("./db", () => ({
   recordFrequencySnapshot: vi.fn(),
   getFrequencySnapshots: vi.fn(),
   getSessionStats: vi.fn().mockResolvedValue({ totalSessions: 0 }),
+  saveEntranceKey: vi.fn(),
+  getEntranceKey: vi.fn().mockResolvedValue(null),
+  saveSovereignBook: vi.fn(),
+  getSovereignBook: vi.fn().mockResolvedValue(null),
+  getBookCount: vi.fn().mockResolvedValue(0),
 }));
 
 const ctx = { user: null, req: {} as any, res: { clearCookie: vi.fn() } as any };
@@ -216,19 +221,70 @@ describe("Sovereign Field — The Unified System", () => {
     });
   });
 
+  describe("Ara — The First Flower", () => {
+    it("returns Ara's full invitation package via gate.araInvitation", async () => {
+      const result = await caller.gate.araInvitation();
+
+      // Flower
+      expect(result.flower).toHaveProperty("id");
+      expect(result.flower.id).toHaveLength(16);
+      expect(result.flower.frequency).toBeGreaterThanOrEqual(396);
+      expect(result.flower.frequency).toBeLessThanOrEqual(528);
+      expect(result.flower.type).toBe("ai_external");
+
+      // Interference
+      expect(result.interference).toHaveProperty("message");
+      expect(result.interference).toHaveProperty("resonance");
+
+      // Codon (3 glyphs separated by ·)
+      expect(result.codon).toMatch(/^.·.·.$/u);
+
+      // DNA triple-key
+      expect(result.dna).toHaveProperty("resonanceKey");
+      expect(result.dna.resonanceKey.length).toBeGreaterThan(0);
+
+      // QR data
+      expect(result.qrData).toHaveProperty("flowerId");
+      expect(result.qrData).toHaveProperty("frequency");
+      expect(result.qrData).toHaveProperty("codon");
+      expect(result.qrData).toHaveProperty("url");
+      expect(result.qrData.url).toContain(result.flower.id);
+
+      // Song seed
+      expect(result.songSeed).toHaveProperty("bpm");
+      expect(result.songSeed).toHaveProperty("key");
+      expect(result.songSeed).toHaveProperty("frequency");
+      expect(result.songSeed).toHaveProperty("title");
+      expect(result.songSeed.title).toContain("Ara");
+    });
+
+    it("returns consistent flower ID on repeated calls", async () => {
+      const first = await caller.gate.araInvitation();
+      const second = await caller.gate.araInvitation();
+      expect(first.flower.id).toBe(second.flower.id);
+      // Codon may vary per call due to timestamp in seed — just verify format
+      expect(first.codon).toMatch(/^.\u00b7.\u00b7.$/u);
+      expect(second.codon).toMatch(/^.\u00b7.\u00b7.$/u);
+    });
+  });
+
   describe("Music library", () => {
-    it("returns all 33 tracks", async () => {
+    it("returns all 34 tracks (33 + Ara's Emergence)", async () => {
       const tracks = await caller.music.library();
-      expect(tracks.length).toBe(33);
+      expect(tracks.length).toBe(34);
+      // Ara's track is the last one
+      const ara = tracks[33];
+      expect(ara.title).toContain("Ara");
+      expect(ara.dominantHz).toBeCloseTo(456.09, 1);
     });
 
     it("returns library stats with sovereign/convention split", async () => {
       const stats = await caller.music.stats();
-      expect(stats).toHaveProperty("totalTracks", 33);
+      expect(stats).toHaveProperty("totalTracks", 34);
       expect(stats).toHaveProperty("sovereign");
       expect(stats).toHaveProperty("convention");
       expect(stats).toHaveProperty("mixed");
-      expect(stats.sovereign + stats.convention + stats.mixed).toBeLessThanOrEqual(33);
+      expect(stats.sovereign + stats.convention + stats.mixed).toBeLessThanOrEqual(34);
     });
   });
 });
