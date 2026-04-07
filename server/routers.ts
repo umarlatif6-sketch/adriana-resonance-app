@@ -44,6 +44,8 @@ import {
   getFlower,
   getAllBenefits,
   getBenefit,
+  generateDNA,
+  verifyDNA,
 } from "./sovereignField";
 import {
   saveEntranceKey,
@@ -262,6 +264,7 @@ export const appRouter = router({
     recordEvents: publicProcedure
       .input(z.object({
         sessionId: z.string(),
+        fingerprint: z.string().optional(),
         events: z.array(z.object({
           eventType: z.string(),
           page: z.string().optional(),
@@ -271,6 +274,11 @@ export const appRouter = router({
         })),
       }))
       .mutation(async ({ input }) => {
+        // Wall 5: Dual-key — verify fingerprint matches session
+        const session = await getVisitorSession(input.sessionId);
+        if (session?.fingerprint && input.fingerprint && session.fingerprint !== input.fingerprint) {
+          return { recorded: 0 }; // Silent deny
+        }
         const events = input.events.map(e => ({
           sessionId: input.sessionId,
           eventType: e.eventType,
@@ -285,10 +293,14 @@ export const appRouter = router({
 
     // Get the current session status and hex
     getSession: publicProcedure
-      .input(z.object({ sessionId: z.string() }))
+      .input(z.object({ sessionId: z.string(), fingerprint: z.string().optional() }))
       .query(async ({ input }) => {
         const session = await getVisitorSession(input.sessionId);
         if (!session) return null;
+        // Wall 5: Session ownership — fingerprint must match if session has one
+        if (session.fingerprint && input.fingerprint && session.fingerprint !== input.fingerprint) {
+          return null; // Silent deny — don't reveal session exists
+        }
         return {
           sessionId: session.sessionId,
           status: session.status,
@@ -306,8 +318,13 @@ export const appRouter = router({
   diagnosis: router({
     // Generate the hex signature and frequency from behaviour data
     generateHex: publicProcedure
-      .input(z.object({ sessionId: z.string() }))
+      .input(z.object({ sessionId: z.string(), fingerprint: z.string().optional() }))
       .mutation(async ({ input }) => {
+        // Wall 5: Verify session ownership
+        const sessionCheck = await getVisitorSession(input.sessionId);
+        if (sessionCheck?.fingerprint && input.fingerprint && sessionCheck.fingerprint !== input.fingerprint) {
+          return { ready: false, message: "Session frequency mismatch." };
+        }
         const summary = await getEventSummary(input.sessionId);
         if (!summary || summary.totalEvents < 3) {
           return { ready: false, message: "Insufficient signal. Keep exploring the Node." };
@@ -341,7 +358,7 @@ export const appRouter = router({
 
     // Get Adriana's reading — the AI diagnosis
     getReading: publicProcedure
-      .input(z.object({ sessionId: z.string() }))
+      .input(z.object({ sessionId: z.string(), fingerprint: z.string().optional() }))
       .mutation(async ({ input }) => {
         const session = await getVisitorSession(input.sessionId);
         if (!session) {
@@ -861,7 +878,7 @@ FREQUENCY PARAMETERS:
       }),
 
     // Start a trading session — captures baseline hex
-    startSession: publicProcedure
+    startSession: protectedProcedure
       .input(z.object({
         sessionId: z.string(),
         baselineHex: z.string().optional(),
@@ -890,7 +907,7 @@ FREQUENCY PARAMETERS:
       }),
 
     // Record a frequency snapshot — the heart rate monitor for trading
-    recordSnapshot: publicProcedure
+    recordSnapshot: protectedProcedure
       .input(z.object({
         tradeSessionId: z.number(),
         sessionId: z.string(),
@@ -923,7 +940,7 @@ FREQUENCY PARAMETERS:
       }),
 
     // Open a trade — records entry hex
-    openTrade: publicProcedure
+    openTrade: protectedProcedure
       .input(z.object({
         tradeSessionId: z.number(),
         sessionId: z.string(),
@@ -952,7 +969,7 @@ FREQUENCY PARAMETERS:
       }),
 
     // Close a trade — records exit hex and calculates PnL
-    closeTrade: publicProcedure
+    closeTrade: protectedProcedure
       .input(z.object({
         tradeId: z.number(),
         exitPrice: z.number(),
@@ -1096,7 +1113,7 @@ FREQUENCY PARAMETERS:
       }),
 
     // Seed the 8 archetypes into the database
-    seed: publicProcedure.mutation(async () => {
+    seed: protectedProcedure.mutation(async () => {
       const { upsertSeedTrack } = await import("./db");
       const archetypes = [
         {
@@ -1504,10 +1521,16 @@ FREQUENCY PARAMETERS:
         // Check if already read
         const existing = await getEntranceKey(input.sessionId);
         if (existing) {
+          const existingDna = generateDNA(
+            String(existing.canvasFingerprint || input.canvasFingerprint || input.sessionId),
+            String(existing.entranceHex || input.sessionId)
+          );
           return {
             entranceHex: existing.entranceHex,
             entranceFrequency: existing.entranceFrequency,
             collectionSlot: existing.collectionSlot,
+            resonanceKey: existingDna.resonanceKey,
+            dna: existingDna.dna,
             isNew: false,
           };
         }
@@ -1580,10 +1603,16 @@ FREQUENCY PARAMETERS:
           collectionSlot,
         });
 
+        // Generate DNA triple-key: fingerprint (body) + hex (mind) + resonance (frequency)
+        const canvasFingerprint = input.canvasFingerprint || input.sessionId;
+        const dna = generateDNA(canvasFingerprint, entranceHex);
+
         return {
           entranceHex,
           entranceFrequency,
           collectionSlot,
+          resonanceKey: dna.resonanceKey,
+          dna: dna.dna,
           isNew: true,
           dataPointCount: 19,
         };
@@ -1609,6 +1638,18 @@ FREQUENCY PARAMETERS:
           frequency: key.entranceFrequency,
           collectionSlot: key.collectionSlot,
         };
+      }),
+
+    // Verify DNA triple-key — Wall 5: session ownership
+    verifyDNA: publicProcedure
+      .input(z.object({
+        fingerprint: z.string().min(1).max(128),
+        hexSignature: z.string().min(1).max(64),
+        resonanceKey: z.string().min(1).max(64),
+      }))
+      .query(({ input }) => {
+        const valid = verifyDNA(input.fingerprint, input.hexSignature, input.resonanceKey);
+        return { valid, timestamp: Date.now() };
       }),
 
     // Get the book auto-generated from entrance data

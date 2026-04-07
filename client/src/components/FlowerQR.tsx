@@ -195,6 +195,15 @@ export default function FlowerQR({ sessionId, compact = false, onFlowerReady }: 
         <div style={{ color: "#666", fontSize: "12px" }}>
           Collection Slot {flower.collectionSlot} / 286
         </div>
+        {/* DNA Triple-Key */}
+        {(flower as any).dna && (
+          <div style={{ marginTop: "0.5rem" }}>
+            <div style={{ color: "#444", fontSize: "9px", letterSpacing: "0.15em" }}>DNA TRIPLE-KEY</div>
+            <div style={{ color: `${color}66`, fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", wordBreak: "break-all" }}>
+              {(flower as any).dna}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 19 Data Points Indicator */}

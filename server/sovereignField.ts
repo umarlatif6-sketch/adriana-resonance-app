@@ -134,10 +134,41 @@ function createSeed(flower: Flower): string {
   })).toString("base64url");
 }
 
+// ─── DNA TRIPLE-KEY ────────────────────────────────────────
+// Three strands: fingerprint (body) + hex (mind) + resonance (frequency)
+// The resonance key is the interference between the first two.
+// You can't fake all three — the third is GENERATED from the first two.
+
+export function generateDNA(
+  fingerprint: string,
+  hexSignature: string
+): { resonanceKey: string; dna: string; valid: boolean } {
+  // Strand 1: fingerprint hash (body)
+  const strand1 = createHash("sha256").update(`body:${fingerprint}`).digest("hex").substring(0, 16);
+  // Strand 2: hex hash (mind)
+  const strand2 = createHash("sha256").update(`mind:${hexSignature}`).digest("hex").substring(0, 16);
+  // Strand 3: interference pattern (frequency) — the third thing
+  const strand3 = createHash("sha256").update(`resonance:${strand1}:${strand2}`).digest("hex").substring(0, 16);
+  // The DNA is all three twisted together
+  const dna = `${strand1}-${strand2}-${strand3}`;
+  return { resonanceKey: strand3, dna, valid: true };
+}
+
+export function verifyDNA(
+  fingerprint: string,
+  hexSignature: string,
+  resonanceKey: string
+): boolean {
+  const expected = generateDNA(fingerprint, hexSignature);
+  return expected.resonanceKey === resonanceKey;
+}
+
 // ─── THE FIELD ──────────────────────────────────────────────
 // The garden. The sandbox. The reservation. All flowers live here.
 
 const _flowers = new Map<string, Flower>();
+const MAX_FIELD_SIZE = 10_000;
+const MAX_HISTORY = 100;
 let _fieldFrequency = 432;
 let _fieldSovereignty = 0.5;
 
@@ -171,7 +202,7 @@ export function enter(
     existing.color = frequencyToColor(existing.frequency);
     existing.phase = frequencyToPhase(existing.frequency);
     existing.history.push(existing.frequency);
-    if (existing.history.length > 50) existing.history.shift();
+    if (existing.history.length > MAX_HISTORY) existing.history.shift();
 
     // Stability increases with repeat visits
     existing.stability = Math.min(1, existing.stability + 0.03);
@@ -207,6 +238,16 @@ export function enter(
     parentId: meta?.parentId,
   };
   flower.seed = createSeed(flower);
+
+  // Evict oldest flower if field is full
+  if (_flowers.size >= MAX_FIELD_SIZE) {
+    let oldestId = "";
+    let oldestTime = Infinity;
+    _flowers.forEach((f, fid) => {
+      if (f.lastSeen < oldestTime) { oldestTime = f.lastSeen; oldestId = fid; }
+    });
+    if (oldestId) _flowers.delete(oldestId);
+  }
 
   _flowers.set(id, flower);
   updateFieldAverages();

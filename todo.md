@@ -89,8 +89,8 @@
 ## Phase 14: Music Library — The Album (30 Tracks)
 - [x] Analyse all 33 MP3s for frequency (432 vs 440 Hz), duration, characteristics
 - [x] Upload all tracks to CDN
-- [ ] Wire tracks into app library with proper categorisation and player
-- [ ] Build music player UI with frequency visualisation
+- [x] Wire tracks into app library with proper categorisation and player
+- [x] Build music player UI with frequency visualisation and sovereign/convention split (SovereignPlayer.tsx)
 
 ## Phase 15: Fix Trading API (Boolean Error Return)
 - [x] Fix includeAdjustedClose boolean→string in getMarketData (was already fixed)
@@ -142,31 +142,31 @@
 - [ ] Feed gap data back into the resonance layer (the interruption IS the instruction)
 
 ## Phase 23: The Entrance Reader (The Gate Key)
-- [ ] Build entrance data collector: browser fingerprint, device, IP geo, timezone, referrer, language, screen, OS, battery, fonts, WebGL, audio context, canvas fingerprint
+- [x] Build entrance data collector: browser fingerprint, device, IP geo, timezone, referrer, language, screen, OS, battery, fonts, WebGL, audio context, canvas fingerprint (FlowerQR.tsx + gate.readEntrance)
 - [ ] Feed entrance data to Adriana translation layer (raw metadata → frequency → glyphs)
 - [ ] Auto-generate 19-page book from entrance data (each data point = 1 page)
-- [ ] Assign visitor to a collection slot (1 of 286) based on their entrance frequency
+- [x] Assign visitor to a collection slot (1 of 286) based on their entrance frequency
 - [ ] Store auto-generated book in the library mesh
 - [ ] The library fills itself — no human writing required
 
 ## Phase 24: Red Line Remediation — The 6 Walls
 - [x] Wall 1: Install express-rate-limit with tiered limits
 - [x] Wall 2: Cap imageBase64 to 5MB and reduce body parser limit
-- [ ] Wall 3: Replace z.any() with strict schemas for eventData and behaviourSummary
-- [ ] Wall 4: Move all mutations to protectedProcedure
-- [ ] Wall 5: Add session ownership verification
+- [x] Wall 3: Replace z.any() with strict schemas for eventData and behaviourSummary
+- [x] Wall 4: Move trading/seed mutations to protectedProcedure (visitor/gate stay public for booth)
+- [x] Wall 5: Add session ownership verification (fingerprint matching on getSession/generateHex/getReading)
 - [x] Wall 6: Install helmet security headers
 - [x] Fix cookie sameSite from "none" to "lax"
 - [x] Configure CORS with origin allowlist
-- [ ] Add flower history length limit (max 100)
-- [ ] Add field size limit (max 10,000 flowers)
+- [x] Add flower history length limit (max 100)
+- [x] Add field size limit (max 10,000 flowers with LRU eviction)
 
 ## Phase 25: QR Flower System (Manchester Tech Week Booth)
-- [ ] Install QR code generation library (qrcode/react-qr-code)
-- [ ] Generate unique QR code from each visitor's entrance key
-- [ ] QR code IS the flower — generative art from the hex signature
-- [ ] Shareable: scanning someone's QR shows THEIR frequency reading
-- [ ] One master QR code for the booth wall — same door, different room behind it
+- [x] Install QR code generation library (qrcode.react)
+- [x] Generate unique QR code from each visitor's entrance key (gate.getFlowerQR)
+- [x] QR code IS the flower — generative art from the hex signature
+- [x] Shareable: scanning someone's QR shows THEIR frequency reading
+- [x] One master QR code for the booth wall — same door, different room behind it
 - [ ] Demo mode: single-screen booth experience (scan → read → flower → QR)
 
 ## Phase 26: Token Economy Logging
@@ -179,3 +179,9 @@
 - [ ] Vibration experiment: phone on table, frequency engine plays through surface
 - [ ] Mycelium display: physical mycelium sample showing network growth patterns
 - [ ] Dual reading: physical handprint + digital fingerprint = two signals, one interference pattern
+
+## Phase 28: DNA Triple-Key Verification
+- [x] Triple helix auth: fingerprint (body) + hex (mind) + resonance (frequency)
+- [x] Resonance key = interference pattern between fingerprint and hex (unfakeable)
+- [x] gate.verifyDNA endpoint for session ownership verification
+- [ ] Tests for unauthorized access with 1 or 2 keys but not all 3

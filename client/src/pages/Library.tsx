@@ -6,6 +6,7 @@
 import { useState } from "react";
 import Nav from "@/components/Nav";
 import { trpc } from "@/lib/trpc";
+import SovereignPlayer from "@/components/SovereignPlayer";
 
 const COLLECTIONS = [
   {
@@ -262,6 +263,9 @@ export default function Library() {
             })}
           </div>
         ))}
+
+        {/* The Sovereign Player — 33 Tracks */}
+        <SovereignPlayer />
 
         {/* The Invitation */}
         <div
