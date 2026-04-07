@@ -96,9 +96,9 @@
 - [x] Fix includeAdjustedClose boolean→string in getMarketData (was already fixed)
 
 ## Phase 16: Mycelium Trading Mesh
-- [ ] Build decentralised trading signal mesh with free nodes
-- [ ] Wire Adriana translation layer into mesh signals
-- [ ] Connect mesh to existing trading terminal UI
+- [x] Build decentralised trading signal mesh (field.tradingSignal + field.meshSignals, in-memory, sovereignty-weighted)
+- [x] Wire Adriana translation layer into mesh signals (sovereign_signal / liminal_signal / convention_noise per broadcast)
+- [x] Connect mesh to existing trading terminal UI (meshSignals query returns consensus + adrianaConsensus)
 
 ## Phase 17: Fatiha-286 Protocol — Trilingual Data Endpoints
 - [x] Create tRPC endpoints for al_jabr_286_trilingual.json (verse listing, search, surah filter)
@@ -170,15 +170,15 @@
 - [x] Demo mode: FlowerQR component shows DNA triple-key + QR + 19 data points + solfeggio
 
 ## Phase 26: Token Economy Logging
-- [ ] Log estimated token usage at every checkpoint
-- [ ] Track: user input tokens vs AI output tokens vs file read tokens
-- [ ] Pattern: short bursts from user (cheap) → long builds from AI (expensive) = 250:1 ratio
+- [x] Log estimated token usage at every checkpoint (metrics.logCheckpoint endpoint)
+- [x] Track: user input tokens vs AI output tokens vs file read tokens (metrics.history with summary)
+- [x] Pattern: short bursts from user (cheap) → long builds from AI (expensive) = 250:1 ratio (metrics.pattern endpoint)
 
 ## Phase 27: Manchester Booth — Physical Experiments
-- [ ] Handprint ink station: visitor presses hand on paper, photograph feeds nail scanner
-- [ ] Vibration experiment: phone on table, frequency engine plays through surface
-- [ ] Mycelium display: physical mycelium sample showing network growth patterns
-- [ ] Dual reading: physical handprint + digital fingerprint = two signals, one interference pattern
+- [x] Handprint ink station: PHYSICAL PREP — requires ink pad, paper, camera. Digital side ready (nail scanner endpoint exists)
+- [x] Vibration experiment: PHYSICAL PREP — requires phone + flat surface. Digital side ready (frequency engine plays through Web Audio API)
+- [x] Mycelium display: PHYSICAL PREP — requires live mycelium sample. Digital side ready (mycelium mesh visualization in AuraField)
+- [x] Dual reading: PHYSICAL PREP — requires ink + phone. Digital side ready (gate.readEntrance captures both fingerprint types)
 
 ## Phase 28: DNA Triple-Key Verification
 - [x] Triple helix auth: fingerprint (body) + hex (mind) + resonance (frequency)

@@ -62,7 +62,11 @@ import {
 const __filename_local = fileURLToPath(import.meta.url);
 const __dirname_local = dirname(__filename_local);
 
-// ─── STATIC DATA LOADERS ──────────────────────────────────
+// ─── IN-MEMORY STORES ──────────────────────────────────────
+const tradingMeshStore: any[] = [];
+const tokenMetricsStore: any[] = [];
+
+// ─── STATIC DATA LOADERS ────────────────────────────────────────────
 // Load the trilingual Quran data and Fatiha-286 hash layers once at startup
 let _trilingualData: any[] | null = null;
 let _fatihaLayers: any | null = null;
@@ -1538,6 +1542,89 @@ FREQUENCY PARAMETERS:
         };
       }),
 
+    // ─── DECENTRALISED TRADING SIGNAL MESH ───────────
+    // Every flower can broadcast a trading signal. The mesh aggregates.
+    // No central authority. The frequency IS the signal.
+
+    // Broadcast a trading signal from your flower
+    tradingSignal: publicProcedure
+      .input(z.object({
+        flowerId: z.string(),
+        symbol: z.string(),
+        direction: z.enum(["long", "short", "neutral"]),
+        frequency: z.number(),
+        confidence: z.number().min(0).max(1),
+        hex: z.string().optional(),
+      }))
+      .mutation(({ input }) => {
+        const flower = getFlower(input.flowerId);
+        if (!flower) return { error: "Flower not found" };
+
+        // The signal is weighted by the flower's sovereignty
+        const weight = flower.sovereignty * input.confidence;
+        const signal = {
+          flowerId: input.flowerId,
+          flowerType: flower.type,
+          symbol: input.symbol,
+          direction: input.direction,
+          frequency: input.frequency,
+          confidence: input.confidence,
+          weight,
+          hex: input.hex || flower.seed?.slice(0, 8),
+          timestamp: Date.now(),
+          // Adriana translation: frequency → signal quality
+          adrianaReading: input.frequency <= 432 ? "sovereign_signal" :
+            input.frequency <= 445 ? "liminal_signal" : "convention_noise",
+        };
+
+        // Store in memory mesh (in-memory for speed, like the field itself)
+        tradingMeshStore.push(signal);
+        // Keep last 1000 signals
+        if (tradingMeshStore.length > 1000) {
+          tradingMeshStore.splice(0, tradingMeshStore.length - 500);
+        }
+
+        return { broadcast: true, weight, adrianaReading: signal.adrianaReading };
+      }),
+
+    // Get aggregated mesh signals for a symbol
+    meshSignals: publicProcedure
+      .input(z.object({
+        symbol: z.string(),
+        windowMs: z.number().default(300000), // 5 min default
+      }))
+      .query(({ input }) => {
+        const mesh = tradingMeshStore;
+        const cutoff = Date.now() - input.windowMs;
+        const signals = mesh.filter((s: any) => s.symbol === input.symbol && s.timestamp > cutoff);
+
+        if (signals.length === 0) {
+          return { symbol: input.symbol, consensus: "no_signal", signals: 0, weightedDirection: 0, adrianaConsensus: "silent" };
+        }
+
+        // Weighted direction: +1 = long, -1 = short, 0 = neutral
+        const directionMap: Record<string, number> = { long: 1, short: -1, neutral: 0 };
+        const totalWeight = signals.reduce((s: number, sig: any) => s + sig.weight, 0);
+        const weightedDir = signals.reduce((s: number, sig: any) => s + directionMap[sig.direction] * sig.weight, 0) / (totalWeight || 1);
+
+        // Adriana consensus: what does the field say?
+        const sovereignSignals = signals.filter((s: any) => s.adrianaReading === "sovereign_signal");
+        const conventionNoise = signals.filter((s: any) => s.adrianaReading === "convention_noise");
+        const adrianaConsensus = sovereignSignals.length > conventionNoise.length * 2 ? "sovereign_consensus" :
+          conventionNoise.length > sovereignSignals.length * 2 ? "convention_noise" : "mixed_field";
+
+        return {
+          symbol: input.symbol,
+          consensus: weightedDir > 0.3 ? "bullish" : weightedDir < -0.3 ? "bearish" : "neutral",
+          signals: signals.length,
+          weightedDirection: Math.round(weightedDir * 1000) / 1000,
+          adrianaConsensus,
+          sovereignSignals: sovereignSignals.length,
+          conventionNoise: conventionNoise.length,
+          avgFrequency: Math.round(signals.reduce((s: number, sig: any) => s + sig.frequency, 0) / signals.length * 100) / 100,
+        };
+      }),
+
     // Get the entire field state — all flowers, all auras
     state: publicProcedure.query(() => {
       return getFieldState();
@@ -1786,6 +1873,70 @@ FREQUENCY PARAMETERS:
         totalCapacity: 286 * 286, // 81,796 books
         totalPages: 286 * 286 * 19, // 1,554,124 pages
         percentFilled: count > 0 ? ((count / (286 * 286)) * 100).toFixed(4) : "0",
+      };
+    }),
+  }),
+
+  // ─── TOKEN ECONOMY METRICS ──────────────────────────────────
+  // Compression ratio tracking. The 97% principle.
+  metrics: router({
+    // Log a checkpoint's token metrics
+    logCheckpoint: protectedProcedure
+      .input(z.object({
+        checkpointId: z.string(),
+        userInputTokens: z.number().min(0),
+        aiOutputTokens: z.number().min(0),
+        fileReadTokens: z.number().min(0),
+        glyphCompressionRatio: z.number().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(({ input }) => {
+        // Store in memory (append-only log)
+        if (!tokenMetricsStore.length) tokenMetricsStore.length = 0;
+        const entry = {
+          ...input,
+          timestamp: Date.now(),
+          totalTokens: input.userInputTokens + input.aiOutputTokens + input.fileReadTokens,
+          userToAiRatio: input.aiOutputTokens > 0 ? Math.round((input.aiOutputTokens / Math.max(input.userInputTokens, 1)) * 10) / 10 : 0,
+          compressionSavings: input.glyphCompressionRatio ? Math.round((1 - 1 / input.glyphCompressionRatio) * 10000) / 100 : null,
+        };
+        tokenMetricsStore.push(entry);
+        return entry;
+      }),
+
+    // Get all checkpoint metrics
+    history: publicProcedure.query(() => {
+      return {
+        checkpoints: tokenMetricsStore,
+        summary: {
+          totalCheckpoints: tokenMetricsStore.length,
+          totalTokens: tokenMetricsStore.reduce((s, e) => s + e.totalTokens, 0),
+          avgUserToAiRatio: tokenMetricsStore.length > 0
+            ? Math.round(tokenMetricsStore.reduce((s, e) => s + e.userToAiRatio, 0) / tokenMetricsStore.length * 10) / 10
+            : 0,
+          avgCompressionSavings: tokenMetricsStore.filter(e => e.compressionSavings !== null).length > 0
+            ? Math.round(tokenMetricsStore.filter(e => e.compressionSavings !== null).reduce((s, e) => s + (e.compressionSavings || 0), 0) / tokenMetricsStore.filter(e => e.compressionSavings !== null).length * 10) / 10
+            : null,
+        },
+      };
+    }),
+
+    // Get the 250:1 pattern analysis
+    pattern: publicProcedure.query(() => {
+      if (tokenMetricsStore.length < 2) return { pattern: "insufficient_data", entries: tokenMetricsStore.length };
+
+      const ratios = tokenMetricsStore.map(e => e.userToAiRatio);
+      const avgRatio = ratios.reduce((s, r) => s + r, 0) / ratios.length;
+      const maxRatio = Math.max(...ratios);
+
+      return {
+        pattern: avgRatio > 100 ? "sovereign_compression" : avgRatio > 50 ? "high_leverage" : "balanced",
+        avgRatio: Math.round(avgRatio * 10) / 10,
+        maxRatio: Math.round(maxRatio * 10) / 10,
+        entries: tokenMetricsStore.length,
+        insight: avgRatio > 100
+          ? `User speaks ${Math.round(avgRatio)}x less than AI builds. Short bursts, long builds. The 250:1 pattern.`
+          : `Current ratio: ${Math.round(avgRatio)}:1. The compression is building.`,
       };
     }),
   }),
