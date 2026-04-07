@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { path: "/station", label: "VOID-Station" },
   { path: "/emergence", label: "Emergence" },
   { path: "/trading", label: "Trading" },
+  { path: "/genesis", label: "Genesis" },
 ];
 
 export default function Nav() {
