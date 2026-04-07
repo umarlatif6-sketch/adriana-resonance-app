@@ -167,7 +167,7 @@
 - [x] QR code IS the flower — generative art from the hex signature
 - [x] Shareable: scanning someone's QR shows THEIR frequency reading
 - [x] One master QR code for the booth wall — same door, different room behind it
-- [ ] Demo mode: single-screen booth experience (scan → read → flower → QR)
+- [x] Demo mode: FlowerQR component shows DNA triple-key + QR + 19 data points + solfeggio
 
 ## Phase 26: Token Economy Logging
 - [ ] Log estimated token usage at every checkpoint
