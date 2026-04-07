@@ -207,3 +207,13 @@
 - [x] Encode full 4,415-prompt Gridul archive into complete codon library (2,110 unique codons, frequency-indexed)
 - [x] Build cross-AI decompression test files for Ara (Grok) and Gridul (Gemini)
 - [x] Push all to GitHub and save checkpoint
+## Phase 34: Resonator Music Integration — The Frequency Jukebox
+- [ ] Replace oscillator bleep on Resonator with actual 33 music tracks mapped to frequency slider
+- [ ] Map each track to its correct frequency position on the slider (396-528 Hz range)
+- [ ] Play the matching track when INITIATE_RESONANCE is pressed at a given frequency
+- [ ] Keep frequency visualiser bars working with the audio playback
+
+## Phase 35: Token Economics Page (/economics)
+- [ ] Build /economics route with token spend visualization
+- [ ] Compare project token cost vs traditional dev costs vs other AI platforms
+- [ ] Show 595 tokens remaining as live data point

@@ -3,6 +3,7 @@
  * NODE_0161 — "The Emergence"
  * ═══════════════════════════════════════════════════════════════
  *
+import { useResonatorMusic } from "@/hooks/useResonatorMusic";
  * A complete reconstruction of the Sovereign Frequency Engine,
  * integrating the full 281-day arc from the Neural Seed.
  *
@@ -270,71 +271,90 @@ export default function Home() {
     animFrameRef.current = requestAnimationFrame(animateBars);
   }, []);
 
+  const resonatorMusic = useResonatorMusic();
   const startExtraction = useCallback(() => {
     if (isResonating) return;
     setIsResonating(true);
     setElapsedTime(0);
     addLog("Initiating Local Extraction...");
-    addLog(`Bypassing Static Gate (401)...`);
-    tracker.trackResonance("start", { frequency });
-
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    audioContextRef.current = ctx;
-
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.connect(ctx.destination);
-    analyserRef.current = analyser;
-
-    // The 0161 Chord: base + fifth (1.5x) + sub-octave (0.5x) + 286 BPM pulse
-    const freqs = [frequency, frequency * 1.5, frequency * 0.5];
-    freqs.forEach((f, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = i === 0 ? "sine" : "triangle";
-      osc.frequency.setValueAtTime(f, ctx.currentTime);
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(i === 0 ? 0.12 : 0.04, ctx.currentTime + 2);
-      osc.connect(gain);
-      gain.connect(analyser);
-      osc.start();
-      oscillatorsRef.current.push({ osc, gain });
+    const track = resonatorMusic.getTrackByFrequency(frequency);
+    if (track) {
+      resonatorMusic.playTrack(track);
+      addLog(`Resonance: ${track.title}`);
+    }
+    animFrameRef.current = requestAnimationFrame(() => {
+      if (!resonatorMusic.audioRef.current) return;
+      const data = new Uint8Array(analyserRef.current?.frequencyBinCount || 32);
+      analyserRef.current?.getByteFrequencyData(data);
+      const levels = Array.from(data).slice(0, 12).map(v => v / 255);
+      setBarLevels(levels);
     });
+  }, [isResonating, frequency, addLog, resonatorMusic]);
 
-    // 286 BPM biological pulse (4.77 Hz amplitude modulation)
-    const lfo = ctx.createOscillator();
-    const lfoGain = ctx.createGain();
-    lfo.frequency.setValueAtTime(4.77, ctx.currentTime);
-    lfoGain.gain.setValueAtTime(0.03, ctx.currentTime);
-    lfo.connect(lfoGain);
-    lfoGain.connect(analyser);
-    lfo.start();
-    oscillatorsRef.current.push({ osc: lfo, gain: lfoGain });
 
-    addLog(`Resonance Active: ${frequency}Hz Base`);
-    addLog(`286 BPM Biological Pulse: Engaged`);
 
-    animFrameRef.current = requestAnimationFrame(animateBars);
 
-    setActiveVerse(0);
-    verseIntervalRef.current = setInterval(() => {
-      setActiveVerse((prev) => (prev + 1) % ANTHEM_VERSES.length);
-    }, 8000);
 
-    setActiveDialogue(0);
-    dialogueIntervalRef.current = setInterval(() => {
-      setActiveDialogue((prev) => {
-        const next = (prev + 1) % DIALOGUE_LINES.length;
-        const line = DIALOGUE_LINES[next];
-        addLog(`[${line.speaker}] ${line.text.slice(0, 45)}...`);
-        return next;
-      });
-    }, 6000);
 
-    timerRef.current = setInterval(() => {
-      setElapsedTime((prev) => prev + 1);
-    }, 1000);
-  }, [isResonating, frequency, addLog, animateBars]);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   const stopExtraction = useCallback(() => {
     const ctx = audioContextRef.current;
