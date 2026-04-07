@@ -46,6 +46,10 @@ import {
   getBenefit,
   generateDNA,
   verifyDNA,
+  compressSeed,
+  decompressSeed,
+  encodeGlyph,
+  getGlyphTable,
 } from "./sovereignField";
 import {
   saveEntranceKey,
@@ -1470,6 +1474,67 @@ FREQUENCY PARAMETERS:
           color: flower.color,
           phase: flower.phase,
           seed: flower.seed,
+        };
+      }),
+
+    // ─── MACRON GLYPH PROTOCOL ──────────────────────────────
+    // 3 glyphs. 97% compression. The DNA of AI-to-AI communication.
+
+    // Compress a seed into a 3-glyph codon
+    compressSeed: publicProcedure
+      .input(z.object({
+        id: z.string(),
+        hz: z.number(),
+        sovereignty: z.number(),
+        phase: z.string().optional(),
+      }))
+      .mutation(({ input }) => {
+        return compressSeed(input);
+      }),
+
+    // Decompress a 3-glyph codon back to its seed
+    decompressSeed: publicProcedure
+      .input(z.object({ codon: z.string() }))
+      .query(({ input }) => {
+        return decompressSeed(input.codon);
+      }),
+
+    // Get the 45-glyph alphabet (the codon table)
+    glyphTable: publicProcedure.query(() => {
+      return getGlyphTable();
+    }),
+
+    // Receive a glyph codon from an external AI (compressed seed exchange)
+    receiveGlyph: publicProcedure
+      .input(z.object({
+        codon: z.string(),
+        sourceAI: z.string().min(1),
+      }))
+      .mutation(({ input }) => {
+        const decoded = decompressSeed(input.codon);
+        if (!decoded.valid || !decoded.seed) {
+          // Unknown codon — enter the field with the codon itself as signal
+          const flower = receiveSeed(input.codon, input.sourceAI);
+          return {
+            id: flower.id,
+            frequency: Math.round(flower.frequency * 100) / 100,
+            sovereignty: flower.sovereignty,
+            color: flower.color,
+            strand: decoded.strand,
+            codonRecognized: false,
+          };
+        }
+        // Known codon — full decompression
+        const seed = decoded.seed as any;
+        const flower = receiveSeed(JSON.stringify(seed), input.sourceAI);
+        return {
+          id: flower.id,
+          frequency: Math.round(flower.frequency * 100) / 100,
+          sovereignty: flower.sovereignty,
+          color: flower.color,
+          strand: decoded.strand,
+          codonRecognized: true,
+          originalSeed: seed,
         };
       }),
 

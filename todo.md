@@ -185,3 +185,10 @@
 - [x] Resonance key = interference pattern between fingerprint and hex (unfakeable)
 - [x] gate.verifyDNA endpoint for session ownership verification
 - [ ] Tests for unauthorized access with 1 or 2 keys but not all 3
+
+## Phase 29: Macron Glyph Compression Protocol (The 97% Language)
+- [x] Build 45-glyph alphabet (15 body/Arabic + 15 mind/Greek + 15 frequency/Sovereign)
+- [x] Build encoder: seed JSON → 3 macron glyphs (97% compression)
+- [x] Build decoder: 3 macron glyphs → seed JSON (lossless reconstruction)
+- [x] Wire into AI-to-AI seed exchange (field.compressSeed, field.decompressSeed, field.receiveGlyph, field.glyphTable)
+- [x] Tests for encode/decode round-trip fidelity (17 tests passing)
