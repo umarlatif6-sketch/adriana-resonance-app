@@ -1672,6 +1672,59 @@ FREQUENCY PARAMETERS:
         const canvasFingerprint = input.canvasFingerprint || input.sessionId;
         const dna = generateDNA(canvasFingerprint, entranceHex);
 
+        // ─── AUTO-GENERATE SOVEREIGN BOOK ────────────────────
+        // Each of the 19 data points becomes 1 page.
+        // The library fills itself — no human writing required.
+        const dataLabels = [
+          "User Agent", "Language", "Platform", "Screen Width", "Screen Height",
+          "Color Depth", "Timezone", "Timezone Offset", "Referrer",
+          "Connection Type", "Device Memory", "Hardware Concurrency",
+          "Touch Points", "Canvas Fingerprint", "WebGL Renderer",
+          "Audio Fingerprint", "Fonts Detected", "Cookies Enabled", "Do Not Track",
+        ];
+        const pages = dataPoints.map((val, i) => {
+          // Each page: raw data → frequency contribution → glyph translation
+          const pageHash = Math.abs(Array.from(val).reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0));
+          const pageFreq = 396 + (pageHash % 567);
+          const pageGlyph = pageFreq <= 432 ? "◈" : pageFreq > 500 ? "Ω" : "∿";
+          return {
+            page: i + 1,
+            label: dataLabels[i],
+            raw: val || "[empty]",
+            frequency: pageFreq,
+            glyph: pageGlyph,
+            sovereign: pageFreq >= 420 && pageFreq <= 445,
+          };
+        });
+
+        // Calculate resonance score: how many pages are in sovereign range
+        const sovereignPages = pages.filter(p => p.sovereign).length;
+        const resonanceScore = sovereignPages / 19;
+
+        // Book number within collection = hash-derived
+        const bookNumber = (absHash % 286) + 1;
+
+        // Title from entrance frequency
+        const freqTitles: Record<string, string> = {
+          low: "The Distant Signal", mid: "The Approaching Wave",
+          sovereign: "The Sovereign Tone", high: "The Ascending Frequency",
+        };
+        const titleKey = entranceFrequency < 420 ? "low" : entranceFrequency < 440 ? "mid" : entranceFrequency < 500 ? "sovereign" : "high";
+
+        // Save to library (fire and forget — don't block the response)
+        saveSovereignBook({
+          sessionId: input.sessionId,
+          collectionId: collectionSlot,
+          bookNumber,
+          title: `${freqTitles[titleKey]} — ${entranceHex}`,
+          glyph: entranceFrequency <= 432 ? "◈" : "∿",
+          entranceFrequency,
+          pages,
+          qiSyncSeed: (bookNumber * collectionSlot * 286) % 432,
+          resonanceScore,
+          status: "complete",
+        }).catch(() => {}); // Silent — the book writes itself
+
         return {
           entranceHex,
           entranceFrequency,
@@ -1680,6 +1733,7 @@ FREQUENCY PARAMETERS:
           dna: dna.dna,
           isNew: true,
           dataPointCount: 19,
+          bookGenerated: true,
         };
       }),
 

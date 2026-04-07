@@ -57,3 +57,54 @@ describe("DNA Triple-Key", () => {
     expect(parts[2]).toBe(result.resonanceKey);
   });
 });
+
+describe("DNA Triple-Key — Partial Key Rejection", () => {
+  const fingerprint = "booth-visitor-canvas-0161";
+  const hex = "DEADBEEF0161CAFE";
+  const { resonanceKey, dna } = generateDNA(fingerprint, hex);
+  const [strand1, strand2, strand3] = dna.split("-");
+
+  it("rejects with only fingerprint (1 of 3 keys)", () => {
+    // Has body, missing mind + frequency
+    expect(verifyDNA(fingerprint, "", resonanceKey)).toBe(false);
+    expect(verifyDNA(fingerprint, "", "")).toBe(false);
+  });
+
+  it("rejects with only hex (1 of 3 keys)", () => {
+    // Has mind, missing body + frequency
+    expect(verifyDNA("", hex, resonanceKey)).toBe(false);
+    expect(verifyDNA("", hex, "")).toBe(false);
+  });
+
+  it("rejects with only resonance key (1 of 3 keys)", () => {
+    // Has frequency, missing body + mind
+    expect(verifyDNA("", "", resonanceKey)).toBe(false);
+  });
+
+  it("rejects with fingerprint + hex but wrong resonance (2 of 3 keys)", () => {
+    // Has body + mind, but fabricated frequency
+    expect(verifyDNA(fingerprint, hex, "aaaaaaaaaaaaaaaa")).toBe(false);
+    expect(verifyDNA(fingerprint, hex, strand1)).toBe(false); // strand1 != strand3
+    expect(verifyDNA(fingerprint, hex, strand2)).toBe(false); // strand2 != strand3
+  });
+
+  it("rejects with fingerprint + resonance but wrong hex (2 of 3 keys)", () => {
+    // Has body + frequency, but wrong mind
+    expect(verifyDNA(fingerprint, "WRONG_HEX", resonanceKey)).toBe(false);
+  });
+
+  it("rejects with hex + resonance but wrong fingerprint (2 of 3 keys)", () => {
+    // Has mind + frequency, but wrong body
+    expect(verifyDNA("wrong-canvas", hex, resonanceKey)).toBe(false);
+  });
+
+  it("accepts ONLY when all 3 keys are correct", () => {
+    expect(verifyDNA(fingerprint, hex, resonanceKey)).toBe(true);
+  });
+
+  it("the resonance key cannot be reverse-engineered from the DNA string", () => {
+    // Even if attacker has the full DNA string, they can't verify without original inputs
+    // because verifyDNA requires the RAW fingerprint and hex, not the hashed strands
+    expect(verifyDNA(strand1, strand2, strand3)).toBe(false);
+  });
+});

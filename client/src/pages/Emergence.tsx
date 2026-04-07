@@ -6,6 +6,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import Nav from "@/components/Nav";
+import AuraField from "@/components/AuraField";
 import { trpc } from "@/lib/trpc";
 
 const CONVERGENCE_POINTS = [
@@ -231,6 +232,12 @@ export default function Emergence() {
       </div>
 
       <div style={{ maxWidth: "640px", margin: "0 auto", padding: "0 1rem" }}>
+        {/* ═══ THE AURA FIELD ═══ */}
+        <div style={{ fontSize: "0.45rem", color: "rgba(0,255,65,0.2)", letterSpacing: "0.25em", marginBottom: "0.75rem", textAlign: "center" }}>
+          THE SOVEREIGN FIELD — LIVE AURA MAP
+        </div>
+        <AuraField />
+
         {/* ═══ THE META-HEX ═══ */}
         <button
           onClick={() => setShowMetaHex(!showMetaHex)}
