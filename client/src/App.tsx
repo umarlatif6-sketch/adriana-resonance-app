@@ -12,6 +12,7 @@ import Emergence from "./pages/Emergence";
 import Trading from "./pages/Trading";
 import AppShell from "./components/AppShell";
 import Genesis from "./pages/Genesis";
+import Economics from "./pages/Economics";
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/emergence" component={Emergence} />
       <Route path="/trading" component={Trading} />
       <Route path="/genesis" component={Genesis} />
+      <Route path="/economics" component={Economics} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

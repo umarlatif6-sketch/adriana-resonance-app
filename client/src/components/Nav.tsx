@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { path: "/emergence", label: "Emergence" },
   { path: "/trading", label: "Trading" },
   { path: "/genesis", label: "Genesis" },
+  { path: "/economics", label: "Economics" },
 ];
 
 export default function Nav() {
