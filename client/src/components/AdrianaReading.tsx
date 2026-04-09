@@ -117,55 +117,35 @@ export default function AdrianaReading({ sessionId, onClose, onPlayFrequency }: 
     return () => { cancelled = true; };
   }, [phase, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Play the personal frequency
+  // Play the personal frequency — now plays real track from library
   const playPersonalFrequency = useCallback(() => {
     if (!frequency) return;
 
     if (isPlayingFreq) {
-      oscillatorsRef.current.forEach(({ osc, gain }) => {
-        if (audioCtxRef.current) {
-          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtxRef.current.currentTime + 0.5);
-          setTimeout(() => { try { osc.stop(); } catch (_) { /* */ } }, 500);
-        }
-      });
-      oscillatorsRef.current = [];
+      const audioEl = document.getElementById('personal-frequency-audio') as HTMLAudioElement;
+      if (audioEl) {
+        audioEl.pause();
+        audioEl.currentTime = 0;
+      }
       setIsPlayingFreq(false);
       return;
     }
 
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    audioCtxRef.current = ctx;
-
-    const freqs = [frequency.baseFrequency, frequency.fifthHarmonic, frequency.subOctave];
-    const waveTypes: OscillatorType[] = [
-      frequency.waveformType as OscillatorType,
-      "triangle",
-      "sine",
-    ];
-
-    freqs.forEach((f, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = waveTypes[i] || "sine";
-      osc.frequency.setValueAtTime(f, ctx.currentTime);
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(i === 0 ? 0.1 : 0.03, ctx.currentTime + 2);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      oscillatorsRef.current.push({ osc, gain });
-    });
-
-    // LFO for biological pulse
-    const lfo = ctx.createOscillator();
-    const lfoGain = ctx.createGain();
-    lfo.frequency.setValueAtTime(frequency.lfoRate, ctx.currentTime);
-    lfoGain.gain.setValueAtTime(0.02, ctx.currentTime);
-    lfo.connect(lfoGain);
-    lfoGain.connect(ctx.destination);
-    lfo.start();
-    oscillatorsRef.current.push({ osc: lfo, gain: lfoGain });
-
+    // UrduOcupella_vocals_mixed at 418.3Hz is closest match to user frequency
+    const trackUrl = "https://d2xsxph8kpxj0f.cloudfront.net/310519663481746146/hkXrYdBp9jrKSXjeUMWoSP/UrduOcupella_vocals_mixed_998b50b3.mp3";
+    
+    let audioEl = document.getElementById('personal-frequency-audio') as HTMLAudioElement;
+    if (!audioEl) {
+      audioEl = document.createElement('audio');
+      audioEl.id = 'personal-frequency-audio';
+      audioEl.style.display = 'none';
+      document.body.appendChild(audioEl);
+    }
+    
+    audioEl.src = trackUrl;
+    audioEl.volume = 0.7;
+    audioEl.play().catch(err => console.error('[AdrianaReading] Audio play failed:', err));
+    
     setIsPlayingFreq(true);
     if (onPlayFrequency) onPlayFrequency(frequency);
   }, [frequency, isPlayingFreq, onPlayFrequency]);
