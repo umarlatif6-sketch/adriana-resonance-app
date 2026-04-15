@@ -108,7 +108,7 @@ export default function NailReading() {
               ref={cameraInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
+              capture="user"
               onChange={handleImageCapture}
               className="hidden"
             />
