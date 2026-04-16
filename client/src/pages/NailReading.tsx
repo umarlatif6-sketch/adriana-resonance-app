@@ -41,43 +41,11 @@ export default function NailReading() {
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [nailType, setNailType] = useState("pinky");
   const [hand, setHand] = useState("right");
-  const [cameraActive, setCameraActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const mutation = trpc.nail.analyze.useMutation();
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setCameraActive(true);
-      }
-    } catch (err) {
-      console.error("Camera access denied:", err);
-      alert("Camera access required. Please enable camera permissions.");
-    }
-  };
-
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const ctx = canvasRef.current.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
-        const photoData = canvasRef.current.toDataURL("image/jpeg");
-        setImageData(photoData);
-        setCameraActive(false);
-        if (videoRef.current.srcObject) {
-          (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
-        }
-      }
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -92,7 +60,10 @@ export default function NailReading() {
     if (!imageData) return;
     try {
       const response = await mutation.mutateAsync({
-        readingId: 1,
+        imageData,
+        nailType: nailType as "pinky" | "thumb" | "toe" | "other",
+        hand: hand as "left" | "right",
+        categories: NAIL_CATEGORIES,
       });
       setResult(response as DiagnosticResult);
     } catch (error) {
@@ -109,8 +80,8 @@ export default function NailReading() {
           <p className="text-sm text-green-300">16-Field Analysis Across Traditional Doctrines</p>
         </div>
 
-        {/* Camera or Upload Section */}
-        {!imageData && !cameraActive && (
+        {/* Upload Section */}
+        {!imageData && (
           <div className="border border-green-400 p-6 mb-6">
             <div className="flex gap-4">
               <Button
@@ -120,7 +91,7 @@ export default function NailReading() {
                 <Upload size={16} /> Upload Photo
               </Button>
               <Button
-                onClick={startCamera}
+                onClick={() => cameraInputRef.current?.click()}
                 className="bg-green-400 text-black hover:bg-green-300 flex items-center gap-2"
               >
                 <Camera size={16} /> Take Photo
@@ -130,49 +101,17 @@ export default function NailReading() {
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              onChange={handleImageUpload}
+              onChange={handleImageCapture}
               className="hidden"
             />
-          </div>
-        )}
-
-        {/* Camera View */}
-        {cameraActive && (
-          <div className="border border-green-400 p-6 mb-6">
-            <div className="flex flex-col gap-4">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="w-full border border-green-400"
-                style={{ maxHeight: "400px", objectFit: "cover" }}
-              />
-              <canvas
-                ref={canvasRef}
-                width={640}
-                height={480}
-                className="hidden"
-              />
-              <div className="flex gap-4">
-                <Button
-                  onClick={capturePhoto}
-                  className="bg-green-400 text-black hover:bg-green-300 flex-1"
-                >
-                  Capture
-                </Button>
-                <Button
-                  onClick={() => {
-                    setCameraActive(false);
-                    if (videoRef.current?.srcObject) {
-                      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
-                    }
-                  }}
-                  className="bg-red-600 text-white hover:bg-red-500 flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="user"
+              onChange={handleImageCapture}
+              className="hidden"
+            />
           </div>
         )}
 
@@ -209,23 +148,24 @@ export default function NailReading() {
                     onChange={(e) => setHand(e.target.value)}
                     className="w-full bg-black border border-green-400 text-green-400 p-2"
                   >
-                    <option value="right">Right</option>
                     <option value="left">Left</option>
+                    <option value="right">Right</option>
                   </select>
                 </div>
-                <Button
-                  onClick={analyzeNail}
-                  disabled={mutation.isPending}
-                  className="bg-green-400 text-black hover:bg-green-300 w-full"
-                >
-                  {mutation.isPending ? <Loader2 className="animate-spin" /> : "Analyze"}
-                </Button>
-                <Button
-                  onClick={() => setImageData(null)}
-                  className="bg-gray-600 text-white hover:bg-gray-500 w-full"
-                >
-                  Retake
-                </Button>
+              <Button
+                onClick={analyzeNail}
+                disabled={mutation.isPending}
+                className="bg-green-400 text-black hover:bg-green-300 mt-auto"
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2" size={16} />
+                    Analyzing...
+                  </>
+                ) : (
+                  "ANALYZE NAIL"
+                )}
+              </Button>
               </div>
             </div>
           </div>
@@ -233,46 +173,53 @@ export default function NailReading() {
 
         {/* Results */}
         {result && (
-          <div className="border border-green-400 p-6">
-            <h2 className="text-xl font-bold mb-4">DIAGNOSTIC RESULTS</h2>
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="border border-green-400 p-3">
-                <p className="text-xs text-green-300">DOMINANT FREQUENCY</p>
-                <p className="text-lg font-bold">{result.dominant_frequency}Hz</p>
-              </div>
-              <div className="border border-green-400 p-3">
-                <p className="text-xs text-green-300">ARCHETYPE</p>
-                <p className="text-lg font-bold">{result.archetype}</p>
-              </div>
-              <div className="border border-green-400 p-3">
-                <p className="text-xs text-green-300">CONFIDENCE</p>
-                <p className="text-lg font-bold">{(result.confidence * 100).toFixed(1)}%</p>
-              </div>
-            </div>
-            <div className="border border-green-400 p-4 mb-4">
-              <p className="text-xs text-green-300 mb-2">OVERALL READING</p>
-              <p className="text-sm">{result.overall_reading}</p>
-            </div>
-            <div className="space-y-2">
-              {result.categories.map((cat) => (
-                <div key={cat.id} className="border border-green-400 p-3">
-                  <div className="flex justify-between mb-1">
-                    <span className="text-xs font-bold">{cat.name}</span>
-                    <span className="text-xs">{(cat.score * 100).toFixed(0)}%</span>
-                  </div>
-                  <p className="text-xs text-green-300">{cat.observation}</p>
-                  <p className="text-xs text-green-200 mt-1">{cat.frequency_note}</p>
+          <div className="space-y-6">
+            {/* Overall Reading */}
+            <div className="border border-green-400 p-4">
+              <h2 className="text-lg font-bold mb-2">OVERALL READING</h2>
+              <p className="text-green-300 italic mb-4">{result.overall_reading}</p>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="text-green-300">Dominant Frequency:</span>
+                  <div className="text-green-400 font-bold">{result.dominant_frequency} Hz</div>
                 </div>
-              ))}
+                <div>
+                  <span className="text-green-300">Archetype:</span>
+                  <div className="text-green-400 font-bold">{result.archetype}</div>
+                </div>
+                <div>
+                  <span className="text-green-300">Confidence:</span>
+                  <div className="text-green-400 font-bold">{(result.confidence * 100).toFixed(1)}%</div>
+                </div>
+              </div>
             </div>
+
+            {/* 16 Categories */}
+            <div className="border border-green-400 p-4">
+              <h2 className="text-lg font-bold mb-4">16-FIELD DIAGNOSTIC</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {result.categories.map((cat) => (
+                  <div key={cat.id} className="border border-green-400 p-3 text-sm">
+                    <div className="font-bold text-green-400">{cat.name}</div>
+                    <div className="text-green-300 text-xs mt-1">
+                      Score: {(cat.score * 100).toFixed(0)}%
+                    </div>
+                    <div className="text-green-300 text-xs mt-1">{cat.observation}</div>
+                    <div className="text-green-500 text-xs mt-1 italic">Freq: {cat.frequency_note}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Reset Button */}
             <Button
               onClick={() => {
                 setImageData(null);
                 setResult(null);
               }}
-              className="bg-green-400 text-black hover:bg-green-300 w-full mt-6"
+              className="bg-green-400 text-black hover:bg-green-300 w-full"
             >
-              New Reading
+              Analyze Another Nail
             </Button>
           </div>
         )}
