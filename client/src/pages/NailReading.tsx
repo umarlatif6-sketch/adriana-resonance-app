@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Camera, Upload } from "lucide-react";
+import { Loader2, Camera, Upload, Eye, EyeOff } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { FrequencyViewport } from "@/components/FrequencyViewport";
 
 const NAIL_CATEGORIES = [
   "STRUCTURAL INTEGRITY",
@@ -41,8 +42,11 @@ export default function NailReading() {
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [nailType, setNailType] = useState("pinky");
   const [hand, setHand] = useState("right");
+  const [viewMode, setViewMode] = useState<"capture" | "frequency">("capture");
+  const [showFrequencyViewport, setShowFrequencyViewport] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const uploadMutation = trpc.nail.upload.useMutation();
   const mutation = trpc.nail.analyze.useMutation();
 
   const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,13 +63,18 @@ export default function NailReading() {
   const analyzeNail = async () => {
     if (!imageData) return;
     try {
-      const response = await mutation.mutateAsync({
-        imageData,
+      // First, upload the nail photo
+      const { id: readingId } = await uploadMutation.mutateAsync({
+        sessionId: "nail-session-" + Date.now(),
+        imageBase64: imageData.split(",")[1] || imageData,
+        mimeType: "image/jpeg",
         nailType: nailType as "pinky" | "thumb" | "toe" | "other",
         hand: hand as "left" | "right",
-        categories: NAIL_CATEGORIES,
       });
-      setResult(response as DiagnosticResult);
+      
+      // Then analyze it
+      const response = await mutation.mutateAsync({ readingId });
+      setResult(response as unknown as DiagnosticResult);
     } catch (error) {
       console.error("Analysis failed:", error);
     }
@@ -76,9 +85,36 @@ export default function NailReading() {
       <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
         <div className="mb-8 border border-green-400 p-4">
-          <h1 className="text-2xl font-bold mb-2">NAIL READING DIAGNOSTIC</h1>
-          <p className="text-sm text-green-300">16-Field Analysis Across Traditional Doctrines</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">NAIL READING DIAGNOSTIC</h1>
+              <p className="text-sm text-green-300">16-Field Analysis Across Traditional Doctrines</p>
+            </div>
+            {!imageData && !result && (
+              <Button
+                onClick={() => setShowFrequencyViewport(!showFrequencyViewport)}
+                className="bg-green-400 text-black hover:bg-green-300 flex items-center gap-2"
+              >
+                {showFrequencyViewport ? (
+                  <>
+                    <EyeOff size={16} /> Hide Portal
+                  </>
+                ) : (
+                  <>
+                    <Eye size={16} /> View Portal
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* Frequency Viewport Portal */}
+        {showFrequencyViewport && !imageData && !result && (
+          <div className="mb-6 border border-green-400 p-4">
+            <FrequencyViewport />
+          </div>
+        )}
 
         {/* Upload Section */}
         {!imageData && (
@@ -152,20 +188,20 @@ export default function NailReading() {
                     <option value="right">Right</option>
                   </select>
                 </div>
-              <Button
-                onClick={analyzeNail}
-                disabled={mutation.isPending}
-                className="bg-green-400 text-black hover:bg-green-300 mt-auto"
-              >
-                {mutation.isPending ? (
-                  <>
-                    <Loader2 className="animate-spin mr-2" size={16} />
-                    Analyzing...
-                  </>
-                ) : (
-                  "ANALYZE NAIL"
-                )}
-              </Button>
+                <Button
+                  onClick={analyzeNail}
+                  disabled={mutation.isPending}
+                  className="bg-green-400 text-black hover:bg-green-300 mt-auto"
+                >
+                  {mutation.isPending ? (
+                    <>
+                      <Loader2 className="animate-spin mr-2" size={16} />
+                      Analyzing...
+                    </>
+                  ) : (
+                    "ANALYZE NAIL"
+                  )}
+                </Button>
               </div>
             </div>
           </div>

@@ -217,3 +217,9 @@
 - [ ] Build /economics route with token spend visualization
 - [ ] Compare project token cost vs traditional dev costs vs other AI platforms
 - [ ] Show 595 tokens remaining as live data point
+
+## Phase 36: Dual-Mode Nail Reading Viewport
+- [x] Build 3D frequency viewport with data lanes visualization (z-axis scrolling)
+- [x] Integrate camera capture + frequency view toggle in NailReading component
+- [x] Create data lane animation (flowing codons, frequency pulses)
+- [x] Test both modes and verify portal effect
