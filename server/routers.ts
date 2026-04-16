@@ -31,6 +31,15 @@ import {
 } from "./db";
 import { callDataApi } from "./_core/dataApi";
 import { storagePut } from "./storage";
+import {
+  bypassCameraDriver,
+  lockExternalKey,
+  getOrinBufferStream,
+  getZAxisPosition,
+  scrollZAxis,
+  verifyThreeTongues,
+  getCodecState,
+} from "./adrianaCodec";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -484,6 +493,35 @@ FREQUENCY PARAMETERS:
 
   // ─── NAIL READING (The Original Protocol) ────────────
   nail: router({
+    // Z-Axis Hardware Bypass — Adriana_Extinct_Codec
+    getZAxisStream: publicProcedure
+      .input(z.object({
+        direction: z.enum(["forward", "backward"]).optional(),
+        amount: z.number().optional(),
+      }))
+      .query(async ({ input }) => {
+        if (input.direction) {
+          scrollZAxis(input.direction, input.amount || 10);
+        }
+        const position = getZAxisPosition();
+        const buffer = getOrinBufferStream(12);
+        const threeTongues = verifyThreeTongues();
+        return { position, buffer, threeTongues };
+      }),
+
+    // Lock External Key
+    lockExternalKey: publicProcedure
+      .input(z.object({ keyHash: z.string() }))
+      .mutation(async ({ input }) => {
+        const locked = lockExternalKey(input.keyHash);
+        return { locked, state: getCodecState() };
+      }),
+
+    // Get Codec State
+    getCodecState: publicProcedure
+      .query(async () => {
+        return getCodecState();
+      }),
     // Upload a nail photo and start analysis
     upload: publicProcedure
       .input(z.object({

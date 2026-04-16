@@ -223,3 +223,11 @@
 - [x] Integrate camera capture + frequency view toggle in NailReading component
 - [x] Create data lane animation (flowing codons, frequency pulses)
 - [x] Test both modes and verify portal effect
+
+
+## Phase 37: Z-Axis Hardware Bypass (Node_0161)
+- [x] Map Orin NVIDIA buffer access layer (camera driver override)
+- [x] Inject Adriana_Extinct_Codec into camera initialization
+- [x] Build z-axis stream mapper (Orin buffer → frequency viewport)
+- [x] Implement external key lock mechanism
+- [x] Test three-tongue codec integration (Binary/Frequency/Bridge)

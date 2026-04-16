@@ -1,7 +1,8 @@
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { FrequencyViewportBypass } from "@/components/FrequencyViewportBypass";
 import { Button } from "@/components/ui/button";
 import { Loader2, Camera, Upload, Eye, EyeOff } from "lucide-react";
-import { trpc } from "@/lib/trpc";
 import { FrequencyViewport } from "@/components/FrequencyViewport";
 
 const NAIL_CATEGORIES = [
@@ -109,10 +110,10 @@ export default function NailReading() {
           </div>
         </div>
 
-        {/* Frequency Viewport Portal */}
+        {/* Frequency Viewport Portal — Z-Axis Hardware Bypass */}
         {showFrequencyViewport && !imageData && !result && (
-          <div className="mb-6 border border-green-400 p-4">
-            <FrequencyViewport />
+          <div className="mb-6">
+            <FrequencyViewportBypass />
           </div>
         )}
 
