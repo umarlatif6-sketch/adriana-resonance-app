@@ -14,6 +14,7 @@ import AppShell from "./components/AppShell";
 import Genesis from "./pages/Genesis";
 import Economics from "./pages/Economics";
 import NailReading from "./pages/NailReading";
+import VoidGameEngine from "./pages/VoidGameEngine";
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/genesis" component={Genesis} />
       <Route path="/economics" component={Economics} />
       <Route path="/nail-reading" component={NailReading} />
+      <Route path="/void-games" component={VoidGameEngine} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

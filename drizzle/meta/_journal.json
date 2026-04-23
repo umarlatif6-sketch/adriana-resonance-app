@@ -36,6 +36,13 @@
       "when": 1775519767448,
       "tag": "0004_peaceful_hairball",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1776914756525,
+      "tag": "0005_talented_karnak",
+      "breakpoints": true
     }
   ]
 }

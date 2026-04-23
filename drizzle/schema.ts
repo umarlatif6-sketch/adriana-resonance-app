@@ -285,3 +285,61 @@ export const sovereignBooks = mysqlTable("sovereign_books", {
 
 export type SovereignBook = typeof sovereignBooks.$inferSelect;
 export type InsertSovereignBook = typeof sovereignBooks.$inferInsert;
+
+/**
+ * Void Game Engine: Games table
+ * Stores game definitions created from natural language prompts
+ */
+export const games = mysqlTable("games", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 32 }).notNull(), // puzzle, rpg, adventure, etc.
+  definition: json("definition").notNull(), // Full GameDefinition object
+  creatorId: int("creatorId").notNull(),
+  playerCount: int("playerCount").default(1),
+  maxPlayers: int("maxPlayers").default(1),
+  status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Game = typeof games.$inferSelect;
+export type InsertGame = typeof games.$inferInsert;
+
+/**
+ * Void Game Engine: Game Participants table
+ * Tracks players in each game session
+ */
+export const gameParticipants = mysqlTable("game_participants", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  gameId: varchar("gameId", { length: 64 }).notNull(),
+  userId: int("userId").notNull(),
+  sessionId: varchar("sessionId", { length: 64 }).notNull(),
+  score: int("score").default(0),
+  status: mysqlEnum("status", ["active", "completed", "abandoned"]).default("active").notNull(),
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+  leftAt: timestamp("leftAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type GameParticipant = typeof gameParticipants.$inferSelect;
+export type InsertGameParticipant = typeof gameParticipants.$inferInsert;
+
+/**
+ * Void Game Engine: Game Sessions table
+ * Tracks active game sessions with their state
+ */
+export const gameSessions = mysqlTable("game_sessions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  gameId: varchar("gameId", { length: 64 }).notNull(),
+  state: json("state").notNull(), // Full GameState object
+  winner: varchar("winner", { length: 64 }),
+  status: mysqlEnum("status", ["active", "completed", "abandoned"]).default("active").notNull(),
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  endedAt: timestamp("endedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type GameSession = typeof gameSessions.$inferSelect;
+export type InsertGameSession = typeof gameSessions.$inferInsert;

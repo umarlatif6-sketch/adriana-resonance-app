@@ -245,8 +245,57 @@ You are poetic but precise. You read the nail the way a spider reads its web —
 
 Provide an overall reading (2-3 sentences, poetic), a suggested base frequency (396-528 Hz), and the archetype this nail points to.`;
 
+// ─── GAME ROUTER ──────────────────────────────────────
+// Import game router procedures
+const gameRouter = router({
+  // Create game from prompt
+  createFromPrompt: protectedProcedure
+    .input(z.object({
+      prompt: z.string().min(10).max(1000)
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return {
+        success: true,
+        message: "Game creation not yet implemented"
+      };
+    }),
+  // List available games
+  listGames: publicProcedure
+    .query(async () => {
+      return [
+        {
+          id: "frequency-harmony-v1",
+          name: "Frequency Harmony",
+          description: "Tune your frequency to 432 Hz and collect harmonics",
+          type: "puzzle",
+          playerCount: 1,
+          maxPlayers: 1,
+          status: "published",
+          createdAt: new Date()
+        }
+      ];
+    }),
+  // Get game details
+  getGame: publicProcedure
+    .input(z.object({ gameId: z.string() }))
+    .query(async ({ input }) => {
+      return {
+        id: input.gameId,
+        name: "Frequency Harmony",
+        description: "Tune your frequency to 432 Hz and collect harmonics",
+        type: "puzzle",
+        definition: {},
+        playerCount: 1,
+        maxPlayers: 1,
+        status: "published",
+        createdAt: new Date()
+      };
+    })
+});
+
 export const appRouter = router({
   system: systemRouter,
+  game: gameRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
