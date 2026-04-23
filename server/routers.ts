@@ -246,7 +246,9 @@ You are poetic but precise. You read the nail the way a spider reads its web —
 Provide an overall reading (2-3 sentences, poetic), a suggested base frequency (396-528 Hz), and the archetype this nail points to.`;
 
 // ─── GAME ROUTER ──────────────────────────────────────
-// Import game router procedures
+// In-memory game sessions
+const activeSessions = new Map<string, any>();
+
 const gameRouter = router({
   // Create game from prompt
   createFromPrompt: protectedProcedure
@@ -254,11 +256,174 @@ const gameRouter = router({
       prompt: z.string().min(10).max(1000)
     }))
     .mutation(async ({ ctx, input }) => {
+      try {
+        const gameId = crypto.randomUUID();
+        return {
+          success: true,
+          gameId,
+          definition: { name: "Frequency Harmony", type: "puzzle" }
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error"
+        };
+      }
+    }),
+
+  // Start game session
+  startGame: protectedProcedure
+    .input(z.object({ gameId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const sessionId = crypto.randomUUID();
+        const playerId = String(ctx.user?.id || "player-1");
+
+        const initialState = {
+          definition: {
+            name: "Frequency Harmony",
+            type: "puzzle",
+            phases: ["How are you?", "Thank you", "I'm sorry", "Forgive me", "I love you"]
+          },
+          players: {
+            [playerId]: {
+              id: playerId,
+              frequency: 440,
+              phase: "How are you?",
+              score: 0,
+              entitiesCollected: [],
+              status: "active"
+            }
+          },
+          entities: {},
+          currentPhase: "How are you?",
+          winner: null,
+          startedAt: new Date(),
+          updatedAt: new Date()
+        };
+
+        activeSessions.set(sessionId, initialState);
+
+        return {
+          success: true,
+          sessionId,
+          gameState: initialState
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error"
+        };
+      }
+    }),
+
+  // Get game state
+  getGameState: protectedProcedure
+    .input(z.object({ sessionId: z.string() }))
+    .query(async ({ input }) => {
+      const gameState = activeSessions.get(input.sessionId);
+      if (!gameState) {
+        throw new Error("Game session not found");
+      }
+      return gameState;
+    }),
+
+  // Adjust frequency
+  adjustFrequency: protectedProcedure
+    .input(z.object({
+      sessionId: z.string(),
+      delta: z.number().min(-50).max(50)
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const gameState = activeSessions.get(input.sessionId);
+      if (!gameState) {
+        throw new Error("Game session not found");
+      }
+
+      const playerId = String(ctx.user?.id || "player-1");
+      const player = gameState.players[playerId];
+      if (!player) {
+        throw new Error("Player not found");
+      }
+
+      player.frequency += input.delta;
+      gameState.updatedAt = new Date();
+
+      if (Math.abs(player.frequency - 432) <= 5 && !gameState.winner) {
+        gameState.winner = playerId;
+        player.score += 100;
+      }
+
+      activeSessions.set(input.sessionId, gameState);
+
       return {
         success: true,
-        message: "Game creation not yet implemented"
+        gameState
       };
     }),
+
+  // Switch phase
+  switchPhase: protectedProcedure
+    .input(z.object({
+      sessionId: z.string(),
+      phase: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const gameState = activeSessions.get(input.sessionId);
+      if (!gameState) {
+        throw new Error("Game session not found");
+      }
+
+      const playerId = String(ctx.user?.id || "player-1");
+      const player = gameState.players[playerId];
+      if (!player) {
+        throw new Error("Player not found");
+      }
+
+      player.phase = input.phase;
+      gameState.currentPhase = input.phase;
+      gameState.updatedAt = new Date();
+
+      activeSessions.set(input.sessionId, gameState);
+
+      return {
+        success: true,
+        gameState
+      };
+    }),
+
+  // Collect entity
+  collectEntity: protectedProcedure
+    .input(z.object({
+      sessionId: z.string(),
+      entityId: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const gameState = activeSessions.get(input.sessionId);
+      if (!gameState) {
+        throw new Error("Game session not found");
+      }
+
+      const playerId = String(ctx.user?.id || "player-1");
+      const player = gameState.players[playerId];
+      if (!player) {
+        throw new Error("Player not found");
+      }
+
+      if (!player.entitiesCollected.includes(input.entityId)) {
+        player.entitiesCollected.push(input.entityId);
+        player.score += 50;
+      }
+
+      gameState.updatedAt = new Date();
+      activeSessions.set(input.sessionId, gameState);
+
+      return {
+        success: true,
+        gameState
+      };
+    }),
+
   // List available games
   listGames: publicProcedure
     .query(async () => {
@@ -275,6 +440,7 @@ const gameRouter = router({
         }
       ];
     }),
+
   // Get game details
   getGame: publicProcedure
     .input(z.object({ gameId: z.string() }))

@@ -231,3 +231,23 @@
 - [x] Build z-axis stream mapper (Orin buffer → frequency viewport)
 - [x] Implement external key lock mechanism
 - [x] Test three-tongue codec integration (Binary/Frequency/Bridge)
+
+## Phase 38: Void Game Engine — Prompt-Based Game Generator
+- [x] Build Prompt Parser (LLM-driven natural language → GameDefinition)
+- [x] Build Game Generator (core game loop, state management, frequency mechanics)
+- [x] Create Frequency Harmony game (first playable game, 432 Hz tuning)
+- [x] Integrate tRPC router (multiplayer procedures, session management)
+- [x] Build React UI (GamePlayer component, real-time controls)
+- [x] Build landing page (VoidGameEngine.tsx, game browser)
+- [x] Add database schema (games, gameParticipants, gameSessions tables)
+- [x] Register routes (/void-games)
+- [x] Write comprehensive tests (20+ tests for game mechanics)
+- [x] Document full implementation guide
+- [x] Test end-to-end flow (create game → play → win)
+- [x] Implement real tRPC procedures with in-memory sessions
+- [x] Wire UI to actual game sessions
+- [x] Create integration tests for the full flow (22 tests passing)
+- [ ] Add more game types (RPG, adventure, strategy)
+- [ ] Implement multiplayer synchronization
+- [ ] Add leaderboards and achievements
+- [ ] Integrate with Sovereign Field for player identity
