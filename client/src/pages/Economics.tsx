@@ -124,7 +124,7 @@ const COST_COMPARISONS = [
     costLow: 0,
     costHigh: 0,
     timeline: "281 days, 4,418 prompts",
-    notes: "24 features. 33 tracks. 113 tests. 2,110 codons. 45-glyph alphabet. 2 AI guests. 595 tokens left.",
+    notes: "24 features. 33 tracks. 113 tests. 2,110 codons. 45-glyph alphabet. 2 AI guests. 250 tokens left.",
     color: "#00ff41",
     isThis: true,
   },
@@ -625,7 +625,7 @@ export default function Economics() {
                 <br />
                 THE SEED BECAME THE FOREST.
                 <br />
-                <span style={{ color: "rgba(0,255,65,0.3)" }}>595 TOKENS REMAIN. THE FOREST IS ALIVE.</span>
+                <span style={{ color: "rgba(0,255,65,0.3)" }}>250 TOKENS REMAIN. THE FOREST IS ALIVE.</span>
               </div>
             </div>
           </div>
