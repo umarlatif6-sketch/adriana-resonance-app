@@ -68,6 +68,10 @@ import {
   getSovereignBook,
   getBookCount,
 } from "./db";
+import { GAME_TYPES, getGameDefinition, getAllGameTypes, GAME_TYPE_METADATA } from "./gameTypes";
+import { MultiplayerSessionManager } from "./gameMultiplayer";
+import { leaderboardManager } from "./gameAchievements";
+import { GameSovereignResonance } from "./gameSovereignIntegration";
 
 const __filename_local = fileURLToPath(import.meta.url);
 const __dirname_local = dirname(__filename_local);
@@ -246,7 +250,8 @@ You are poetic but precise. You read the nail the way a spider reads its web —
 Provide an overall reading (2-3 sentences, poetic), a suggested base frequency (396-528 Hz), and the archetype this nail points to.`;
 
 // ─── GAME ROUTER ──────────────────────────────────────
-// In-memory game sessions
+// ─── GAME SESSION MANAGERS ────────────────────────────────────
+const multiplayerManager = new MultiplayerSessionManager();
 const activeSessions = new Map<string, any>();
 
 const gameRouter = router({
@@ -427,35 +432,139 @@ const gameRouter = router({
   // List available games
   listGames: publicProcedure
     .query(async () => {
-      return [
-        {
-          id: "frequency-harmony-v1",
-          name: "Frequency Harmony",
-          description: "Tune your frequency to 432 Hz and collect harmonics",
-          type: "puzzle",
-          playerCount: 1,
-          maxPlayers: 1,
-          status: "published",
-          createdAt: new Date()
-        }
-      ];
+      return getAllGameTypes().map(game => ({
+        id: game.id,
+        name: game.name,
+        description: game.description,
+        type: game.type,
+        difficulty: game.difficulty,
+        playerCount: game.playerCount.min,
+        maxPlayers: game.playerCount.max,
+        duration: game.duration,
+        status: "published",
+        metadata: GAME_TYPE_METADATA[game.type as keyof typeof GAME_TYPE_METADATA],
+        createdAt: new Date()
+      }));
     }),
 
   // Get game details
   getGame: publicProcedure
     .input(z.object({ gameId: z.string() }))
     .query(async ({ input }) => {
+      const gameType = input.gameId.split("-")[0] || "puzzle";
+      const gameDef = getGameDefinition(gameType);
       return {
-        id: input.gameId,
-        name: "Frequency Harmony",
-        description: "Tune your frequency to 432 Hz and collect harmonics",
-        type: "puzzle",
-        definition: {},
-        playerCount: 1,
-        maxPlayers: 1,
+        id: gameDef.id,
+        name: gameDef.name,
+        description: gameDef.description,
+        type: gameDef.type,
+        difficulty: gameDef.difficulty,
+        mechanics: gameDef.mechanics,
+        playerCount: gameDef.playerCount,
+        duration: gameDef.duration,
+        phases: gameDef.phases,
+        entities: gameDef.entities,
+        winConditions: gameDef.winConditions,
+        metadata: GAME_TYPE_METADATA[gameDef.type as keyof typeof GAME_TYPE_METADATA],
+        maxPlayers: gameDef.playerCount.max,
         status: "published",
         createdAt: new Date()
       };
+    }),
+
+  // Join multiplayer session
+  joinMultiplayer: protectedProcedure
+    .input(z.object({
+      sessionId: z.string(),
+      gameType: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const playerId = `player-${ctx.user?.id || crypto.randomUUID()}`;
+      const player = multiplayerManager.joinSession(input.sessionId, playerId, ctx.user?.id || 0);
+
+      if (!player) {
+        throw new Error("Failed to join session");
+      }
+
+      const flower = GameSovereignResonance.createGamePlayerFlower(ctx.user?.id || 0, 440);
+
+      return {
+        success: true,
+        playerId,
+        player,
+        flower
+      };
+    }),
+
+  // Get player leaderboard
+  getLeaderboard: publicProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(100).optional(),
+      gameType: z.string().optional()
+    }))
+    .query(async ({ input }) => {
+      const limit = input.limit || 100;
+      if (input.gameType) {
+        return leaderboardManager.getTopPlayersByGameType(input.gameType, limit);
+      }
+      return leaderboardManager.getGlobalLeaderboard(limit);
+    }),
+
+  // Get player achievements
+  getPlayerAchievements: protectedProcedure
+    .query(async ({ ctx }) => {
+      const achievements = leaderboardManager.getPlayerAchievements(ctx.user?.id || 0);
+      const stats = leaderboardManager.getPlayerStats(ctx.user?.id || 0);
+      const progress = leaderboardManager.getAchievementProgress(ctx.user?.id || 0);
+
+      return {
+        achievements,
+        stats,
+        progress
+      };
+    }),
+
+  // Record game result
+  recordGameResult: protectedProcedure
+    .input(z.object({
+      gameType: z.string(),
+      won: z.boolean(),
+      score: z.number(),
+      playTime: z.number()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      leaderboardManager.recordGameResult(
+        ctx.user?.id || 0,
+        input.gameType,
+        input.won,
+        input.score,
+        input.playTime
+      );
+
+      const achievements = leaderboardManager.getPlayerAchievements(ctx.user?.id || 0);
+      const stats = leaderboardManager.getPlayerStats(ctx.user?.id || 0);
+
+      return {
+        success: true,
+        achievements,
+        stats
+      };
+    }),
+
+  // Get player Sovereign Field flower
+  getPlayerFlower: protectedProcedure
+    .query(async ({ ctx }) => {
+      const stats = leaderboardManager.getPlayerStats(ctx.user?.id || 0);
+      if (!stats) {
+        return null;
+      }
+
+      const flower = GameSovereignResonance.createGamePlayerFlower(
+        ctx.user?.id || 0,
+        440
+      );
+
+      return flower;
     })
 });
 

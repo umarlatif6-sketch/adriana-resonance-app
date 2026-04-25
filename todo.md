@@ -247,7 +247,7 @@
 - [x] Implement real tRPC procedures with in-memory sessions
 - [x] Wire UI to actual game sessions
 - [x] Create integration tests for the full flow (22 tests passing)
-- [ ] Add more game types (RPG, adventure, strategy)
-- [ ] Implement multiplayer synchronization
-- [ ] Add leaderboards and achievements
-- [ ] Integrate with Sovereign Field for player identity
+- [x] Add more game types (RPG, adventure, strategy) - 4 game types implemented
+- [x] Implement multiplayer synchronization - MultiplayerSessionManager with event-driven sync
+- [x] Add leaderboards and achievements - 15 achievements, global leaderboard, game-type rankings
+- [x] Integrate with Sovereign Field for player identity - Game player flowers with frequency mapping
