@@ -15,6 +15,7 @@ import Genesis from "./pages/Genesis";
 import Economics from "./pages/Economics";
 import NailReading from "./pages/NailReading";
 import VoidGameEngine from "./pages/VoidGameEngine";
+import SonicStudio from "./pages/SonicStudio";
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/economics" component={Economics} />
       <Route path="/nail-reading" component={NailReading} />
       <Route path="/void-games" component={VoidGameEngine} />
+      <Route path="/sonic-studio" component={SonicStudio} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

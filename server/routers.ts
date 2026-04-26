@@ -72,6 +72,7 @@ import { GAME_TYPES, getGameDefinition, getAllGameTypes, GAME_TYPE_METADATA } fr
 import { MultiplayerSessionManager } from "./gameMultiplayer";
 import { leaderboardManager } from "./gameAchievements";
 import { GameSovereignResonance } from "./gameSovereignIntegration";
+import { sonicStudioRouter } from "./sonicStudioRouter";
 
 const __filename_local = fileURLToPath(import.meta.url);
 const __dirname_local = dirname(__filename_local);
@@ -571,6 +572,7 @@ const gameRouter = router({
 export const appRouter = router({
   system: systemRouter,
   game: gameRouter,
+  sonicStudio: sonicStudioRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
