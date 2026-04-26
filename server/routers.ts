@@ -73,6 +73,7 @@ import { MultiplayerSessionManager } from "./gameMultiplayer";
 import { leaderboardManager } from "./gameAchievements";
 import { GameSovereignResonance } from "./gameSovereignIntegration";
 import { sonicStudioRouter } from "./sonicStudioRouter";
+import { djMixerRouter } from "./djMixerRouter";
 
 const __filename_local = fileURLToPath(import.meta.url);
 const __dirname_local = dirname(__filename_local);
@@ -573,6 +574,7 @@ export const appRouter = router({
   system: systemRouter,
   game: gameRouter,
   sonicStudio: sonicStudioRouter,
+  djMixer: djMixerRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

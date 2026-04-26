@@ -23,6 +23,7 @@ import Nav from "@/components/Nav";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTracker } from "@/components/AppShell";
 import { useResonatorMusic } from "@/hooks/useResonatorMusic";
+import { DJMixer } from "@/components/DJMixer";
 
 // ─── THE 16 CICADA PULSES ───────────────────────────────────
 const CICADA_PULSES = [
@@ -720,6 +721,11 @@ export default function Home() {
                   ))}
                 </div>
               )}
+
+              {/* DJ Mixer */}
+              <div style={{ maxWidth: "28rem", width: "100%" }}>
+                <DJMixer />
+              </div>
 
               {/* Footer */}
               <div
